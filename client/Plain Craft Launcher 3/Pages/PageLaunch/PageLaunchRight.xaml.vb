@@ -194,7 +194,7 @@ Public Class PageLaunchRight
     End Sub
 
     ''' <summary>
-    ''' 点击「本日人品」统计块直接查看人品。
+    ''' 点击「今日人品」统计块直接查看人品。
     ''' </summary>
     Private Sub LabStatJrrp_Click(sender As Object, e As MouseButtonEventArgs) Handles LabStatJrrp.MouseLeftButtonUp
         Try
