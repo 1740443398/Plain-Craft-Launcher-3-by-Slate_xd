@@ -4,6 +4,8 @@
         '重复加载部分
         PanBack.ScrollToHome()
         ThemeCheckAll(True)
+        '发布版只保留蓝色系主题（《PCL 存储库合理使用指南》第 5 条）
+        ApplyThemeVisibility()
         If ThemeDontClick <> 0 Then
             Dim NewText As String = Nothing
             Select Case ThemeDontClick
@@ -576,6 +578,56 @@ Refresh:
         End Function
         SliderBackgroundOpacity.GetHintText = Function(v) Math.Round(v * 0.1) & "%"
         SliderBackgroundBlur.GetHintText = Function(v) v & " 像素"
+    End Sub
+
+
+    ''' <summary>
+    ''' 发布版隐藏非蓝色系主题，自用版全部显示。
+    ''' </summary>
+    Private Sub ApplyThemeVisibility()
+        Try
+            If AllowAllThemes Then Return '自用版保持原样，不做任何改动
+
+            '发布版：不用原来的 6 列网格，另建一个 4 列网格只放蓝色系主题，
+            '避免在原网格里压列宽导致按钮挤在一起。
+            Dim Parent As Panel = TryCast(PanLauncherTheme.Parent, Panel)
+            If Parent Is Nothing Then Return
+
+            Dim Simple As New Grid With {.Margin = PanLauncherTheme.Margin}
+            Simple.ColumnDefinitions.Add(New ColumnDefinition With {.Width = GridLength.Auto, .SharedSizeGroup = "Name1"})
+            For I As Integer = 1 To 3
+                Simple.ColumnDefinitions.Add(New ColumnDefinition With {.Width = New GridLength(1, GridUnitType.Star)})
+            Next
+            Simple.RowDefinitions.Add(New RowDefinition With {.Height = New GridLength(1, GridUnitType.Star)})
+
+            '左侧「主题」标签
+            Simple.Children.Add(New TextBlock With {
+                .Text = "主题",
+                .VerticalAlignment = VerticalAlignment.Center,
+                .HorizontalAlignment = HorizontalAlignment.Left,
+                .Margin = New Thickness(0, 0, 20, 0)
+            })
+
+            '把三个蓝色主题从旧网格挪过来
+            Dim Moves As (Radio As MyRadioBox, Col As Integer)() = {
+                (RadioLauncherTheme0, 1), (RadioLauncherTheme1, 2), (RadioLauncherTheme11, 3)
+            }
+            For Each M In Moves
+                PanLauncherTheme.Children.Remove(M.Radio)
+                Grid.SetRow(M.Radio, 0)
+                Grid.SetColumn(M.Radio, M.Col)
+                Simple.Children.Add(M.Radio)
+            Next
+
+            '插入到旧网格的位置，然后隐藏旧网格
+            Dim Idx As Integer = Parent.Children.IndexOf(PanLauncherTheme)
+            If Idx >= 0 Then Parent.Children.Insert(Idx, Simple) Else Parent.Children.Add(Simple)
+            PanLauncherTheme.Visibility = Visibility.Collapsed
+
+            Logger.Info("发布版：主题区域改为 4 列布局，仅显示龙猫蓝 / 甜柠青 / 极客蓝")
+        Catch ex As Exception
+            Logger.Warn(ex, "应用主题可见性失败")
+        End Try
     End Sub
 
 End Class
