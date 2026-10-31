@@ -160,7 +160,8 @@ Friend Module ModSecret
     End Sub
     '主题编号 -> {色相, 饱和度, 亮度修正, 顶栏色相差}
     '编号 0-4 为默认主题（始终可用），5 以上需赞助或成就解锁
-    '编号 15 已移除（原小猫绿，违反《PCL 存储库合理使用指南》第 5 条）
+    '编号 15 为小猫绿，仅在自用版（AllowAllThemes = True）中可用；
+    '发布版不显示，也不参与解锁（合规要求：主色相必须为蓝色）
     Public ReadOnly ThemeColors As New Dictionary(Of Integer, Integer()) From {
         {0, New Integer() {210, 85, 0, 0}},   '龙猫蓝
         {1, New Integer() {180, 85, 0, 0}},   '甜柠青
@@ -176,7 +177,8 @@ Friend Module ModSecret
         {11, New Integer() {195, 80, 0, 0}},  '极客蓝
         {12, New Integer() {210, 85, 0, 30}}, '滑稽彩（动态，见 ThemeRefreshMain）
         {13, New Integer() {210, 85, 0, 30}}, '欧皇彩（动态）
-        {14, New Integer() {210, 85, 0, 0}}   '自定义（用滑条值）
+        {14, New Integer() {210, 85, 0, 0}},  '自定义（用滑条值）
+        {15, New Integer() {98, 24, -7, 0}}   '小猫绿（#5a7749），仅自用版
     }
 
     ''' <summary>
@@ -200,6 +202,14 @@ Friend Module ModSecret
             '沿用 PCL 原版的赞助解锁机制（《PCL 存储库合理使用指南》第 5 条要求）。
             '主题 0~4 为默认蓝色系，5 以上需通过赞助或成就解锁，解锁记录存于 UiLauncherThemeHide2。
             '此处只做读取与校验，不主动写入，避免绕过原版的解锁门槛。
+            '自用版：小猫绿是本版本新增主题，直接解锁（发布版不涉及）
+            If AllowAllThemes Then
+                Dim Ul As New List(Of String)(Settings.Get(Of String)("UiLauncherThemeHide2").ToString.Split("|"c))
+                If Not Ul.Contains("15") Then
+                    Ul.Add("15")
+                    Settings.Set("UiLauncherThemeHide2", Ul.Distinct().Join("|"c))
+                End If
+            End If
             Dim Unlocked As String() = Settings.Get(Of String)("UiLauncherThemeHide2").ToString.Split("|"c)
             Dim Valid As New List(Of String)
             For Each Item In Unlocked
@@ -234,8 +244,9 @@ Friend Module ModSecret
         Try
             '发布版：只允许蓝色系，其余一律视为不可用（合规要求）
             If Not AllowAllThemes AndAlso Not BlueThemes.Contains(Id) Then Return False
-            '默认主题（0~4）始终可用，其余需赞助或成就解锁
+            '默认主题（0~4）始终可用；小猫绿（15）仅自用版可用
             If Id <= 4 Then Return True
+            If Id = 15 Then Return AllowAllThemes
             Dim Unlocked As String() = Settings.Get(Of String)("UiLauncherThemeHide2").ToString.Split("|"c)
             Return Unlocked.Contains(Id.ToString())
         Catch ex As Exception
@@ -288,6 +299,7 @@ Friend Module ModSecret
             Case 12 : Return "滑稽彩"
             Case 13 : Return "欧皇彩"
             Case 14 : Return "自定义"
+            Case 15 : Return "小猫绿"
             Case Else : Return $"主题 {Id}"
         End Select
     End Function
