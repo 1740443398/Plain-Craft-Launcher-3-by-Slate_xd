@@ -233,7 +233,17 @@
         Dim SeedA As ULong = ("asdfgbn" & Date.Now.DayOfYear.ToString() & "12#3$45" & Date.Now.Year.ToString() & "IUY").GetStableHashCode()
         Dim SeedB As ULong = ("QWERTY" & ModBase.Identify & "0*8&6" & Date.Now.Day.ToString() & "kjhg").GetStableHashCode()
         Dim Raw As Integer = CInt(Math.Round(Math.Abs((CDbl(SeedA) / 3.0 + CDbl(SeedB) / 3.0) / 527.0) Mod 1001.0))
-        Dim Score As Integer = If(Raw < 970, CInt(Math.Round(CDbl(Raw) / 969.0 * 99.0)), 100)
+        'PCL3 调整：原版把 Raw(0~1000) 均匀映射到 0~99，平均只有 51 分，
+        '近六成情况低于 60 分，容易影响心情。改为整体上移到 80~100 区间，
+        '同时保留满分与 99 分的稀有度（约 0.6% 与 1%）。
+        Dim Score As Integer
+        If Raw >= 995 Then
+            Score = 100
+        ElseIf Raw >= 985 Then
+            Score = 99
+        Else
+            Score = CInt(Math.Round(80.0 + CDbl(Raw) / 984.0 * 18.0))
+        End If
         Dim Tail As String
         If Score = 100 Then
             Tail = "！100！100！！！！！" & If(ModSecret.ThemeUnlock(13, ShowDoubleHint:=False), vbCrLf & "隐藏主题 欧皇彩 已解锁！", "")
