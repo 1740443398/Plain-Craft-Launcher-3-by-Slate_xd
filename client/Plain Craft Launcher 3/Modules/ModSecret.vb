@@ -159,7 +159,8 @@ Friend Module ModSecret
         End Sub)
     End Sub
     '主题编号 -> {色相, 饱和度, 亮度修正, 顶栏色相差}
-    '编号 0-4 为默认主题，5-14 为隐藏主题，15 为新增的小猫绿
+    '编号 0-4 为默认主题（始终可用），5 以上需赞助或成就解锁
+    '编号 15 为小猫绿，本版本新增，始终可用
     Public ReadOnly ThemeColors As New Dictionary(Of Integer, Integer()) From {
         {0, New Integer() {210, 85, 0, 0}},   '龙猫蓝
         {1, New Integer() {180, 85, 0, 0}},   '甜柠青
@@ -197,20 +198,28 @@ Friend Module ModSecret
     ''' </summary>
     Friend Sub ThemeCheckAll(EffectSetup As Boolean)
         Try
-            'PCL3 定制：一次性解锁全部主题与配色。
-            '原版把主题 5~15 设为需要赞助/成就解锁，这里直接全部放开。
+            '沿用 PCL 原版的赞助解锁机制（《PCL 存储库合理使用指南》第 5 条要求）。
+            '主题 0~4 为默认蓝色系，5 以上需通过赞助或成就解锁，解锁记录存于 UiLauncherThemeHide2。
+            '此处只做读取与校验，不主动写入，避免绕过原版的解锁门槛。
             Dim Unlocked As New List(Of String)(Settings.Get(Of String)("UiLauncherThemeHide2").ToString.Split("|"c))
+            '小猫绿为本版本新增主题，直接解锁，不受赞助门槛限制
             Dim Changed As Boolean = False
-            For Each Id As Integer In ThemeColors.Keys
-                If Not Unlocked.Contains(Id.ToString()) Then
-                    Unlocked.Add(Id.ToString())
-                    Changed = True
-                End If
-            Next
+            If Not Unlocked.Contains("15") Then
+                Unlocked.Add("15")
+                Changed = True
+            End If
             If Changed Then
                 Settings.Set("UiLauncherThemeHide2", Unlocked.Distinct().Join("|"c))
-                Logger.Info($"已解锁全部主题，共 {ThemeColors.Count} 个")
+                Logger.Info("已解锁小猫绿主题")
             End If
+            Dim Valid As New List(Of String)
+            For Each Item In Unlocked
+                Dim Id As Integer = 0
+                If Integer.TryParse(Item, Id) AndAlso ThemeColors.ContainsKey(Id) AndAlso Not Valid.Contains(Item) Then
+                    Valid.Add(Item)
+                End If
+            Next
+            Logger.Info($"已解锁主题 {Valid.Count} 个（默认 5 个 + 小猫绿始终可用）")
         Catch ex As Exception
             Logger.Warn(ex, "同步主题解锁状态失败")
         End Try
@@ -221,7 +230,9 @@ Friend Module ModSecret
     ''' </summary>
     Friend Function ThemeCheckOne(Id As Integer) As Boolean
         Try
+            '默认主题（0~4）与小猫绿（15）始终可用，其余需赞助或成就解锁
             If Id <= 4 Then Return True
+            If Id = 15 Then Return True
             Dim Unlocked As String() = Settings.Get(Of String)("UiLauncherThemeHide2").ToString.Split("|"c)
             Return Unlocked.Contains(Id.ToString())
         Catch ex As Exception

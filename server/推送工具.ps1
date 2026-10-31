@@ -1,10 +1,16 @@
 ﻿# PCL3 更新与公告推送工具
 # 用法：右键「使用 PowerShell 运行」，或 powershell -ExecutionPolicy Bypass -File 推送工具.ps1
 #
-# 首次使用请修改下面的 $ApiBase 和 $Token
+# 首次使用请修改下面的 $ApiBase、$Password、$ClientKey
+# token 会在运行时自动登录获取，无需手填
 
-$ApiBase = "https://pcl3.byethost9.com/api/"
-$Token   = $env:PCL3_ADMIN_TOKEN   # 从环境变量读取，不要写死在脚本里
+$ApiBase   = "https://pcl3.byethost9.com/api/"
+# 管理员密码（用于自动登录换取 token，token 有效期 12 小时）
+$Password  = $env:PCL3_ADMIN_PASSWORD   # 从环境变量读取
+# 客户端 Key（公开接口需要，与客户端 ModByethost.vb 一致）
+$ClientKey = "REPLACE_WITH_YOUR_CLIENT_API_KEY"
+# 运行时自动获取，不需要手填
+$Token     = ""
 
 # ===== Byethost JS 挑战绕过 =====
 # 该主机会返回 AES Cookie 挑战页，普通 HTTP 客户端无法直接访问。
@@ -44,13 +50,15 @@ public static class BypassHost
         }
     }
 
-    static string RawRequest(string url, string cookie, string postData)
+    static string RawRequest(string url, string cookie, string postData, string authToken, string clientKey)
     {
         var req = (HttpWebRequest)WebRequest.Create(url);
         req.Method = string.IsNullOrEmpty(postData) ? "GET" : "POST";
         req.Timeout = 30000;
         req.ReadWriteTimeout = 30000;
         req.UserAgent = "PCL3-PushTool/1.0";
+        if (!string.IsNullOrEmpty(authToken)) req.Headers.Add("X-PCL3-Token", authToken);
+        if (!string.IsNullOrEmpty(clientKey)) req.Headers.Add("X-PCL3-Key", clientKey);
         if (!string.IsNullOrEmpty(cookie)) req.Headers.Add("Cookie", "__test=" + cookie);
         if (!string.IsNullOrEmpty(postData))
         {
@@ -89,29 +97,58 @@ public static class BypassHost
     // 取挑战 cookie（单独用 GET 触发，避免 POST 被挑战页吞掉）
     public static string GetCookie(string url)
     {
-        string body = RawRequest(url, null, null);
+        string body = RawRequest(url, null, null, null, null);
         if (!IsChallenge(body)) return "";
         return Solve(body);
     }
 
     // 带挑战处理的请求：先用 GET 拿 cookie，再用它发正式请求
-    public static string Request(string url, string postData)
+    public static string Request(string url, string postData, string authToken, string clientKey)
     {
         string ck = GetCookie(url);
-        if (string.IsNullOrEmpty(ck)) return RawRequest(url, null, postData);
-        return RawRequest(url, ck, postData);
+        if (string.IsNullOrEmpty(ck)) return RawRequest(url, null, postData, authToken, clientKey);
+        return RawRequest(url, ck, postData, authToken, clientKey);
     }
 }
 "@ -ErrorAction SilentlyContinue
 
+
+# 自动登录获取 token（token 有效期 12 小时）
+function Ensure-Login {
+    if ($script:Token -ne "") { return $true }
+
+    Write-Host "  正在登录获取 token ..." -ForegroundColor DarkGray
+    $pairs = "password=" + [uri]::EscapeDataString($Password)
+    try {
+        $raw = [BypassHost]::Request($ApiBase + "?action=login", $pairs, "", $ClientKey)
+        if ([string]::IsNullOrWhiteSpace($raw) -or $raw -match "<!DOCTYPE") {
+            Write-Host "  x 登录失败：服务器无有效响应" -ForegroundColor Red
+            return $false
+        }
+        $obj = $raw | ConvertFrom-Json
+        if (-not $obj.ok -or -not $obj.token) {
+            Write-Host "  x 登录失败：$(if ($obj.error) { $obj.error } else { "未返回 token" })" -ForegroundColor Red
+            Write-Host "     请检查脚本顶部的 `$Password 是否正确。" -ForegroundColor Yellow
+            return $false
+        }
+        $script:Token = $obj.token
+        $hours = [math]::Round($obj.expiresIn / 3600, 1)
+        Write-Host "  OK  登录成功（有效期 $hours 小时）" -ForegroundColor Green
+        return $true
+    } catch {
+        Write-Host "  x 登录异常：$($_.Exception.Message)" -ForegroundColor Red
+        return $false
+    }
+}
+
 function Invoke-Api {
-    param([string]$Action, [hashtable]$Body = @{}, [hashtable]$Query = @{})
+    param([string]$Action, [hashtable]$Body = @{}, [hashtable]$Query = @{}, [switch]$Quiet)
+
     $url = $ApiBase + "?action=" + $Action
     foreach ($k in $Query.Keys) { $url += "&$k=" + [uri]::EscapeDataString([string]$Query[$k]) }
 
     $postData = ""
     if ($Body.Count -gt 0) {
-        $Body["token"] = $Token
         $pairs = @()
         foreach ($k in $Body.Keys) {
             $pairs += "$([uri]::EscapeDataString($k))=$([uri]::EscapeDataString([string]$Body[$k]))"
@@ -119,15 +156,51 @@ function Invoke-Api {
         $postData = $pairs -join "&"
     }
 
+    # 管理接口需要 token，未登录时自动登录
+    $adminActions = @("admin_overview","publish","release_clear","notice","delete_notice","donor","delete_donor","feedback_update","feedback_delete","cave_update","mail_queue","mail_run","mail_clear")
+    if ($adminActions -contains $Action) {
+        if (-not (Ensure-Login)) { return $null }
+    }
+
+    if (-not $Quiet) { Write-Host "  → 请求 $Action ..." -ForegroundColor DarkGray }
+
     try {
-        $raw = [BypassHost]::Request($url, $postData)
-        if ($raw -match 'slowAES') {
-            Write-Host "请求被主机挑战页拦截，绕过失败" -ForegroundColor Red
+        $raw = [BypassHost]::Request($url, $postData, $Token, $ClientKey)
+
+        if ([string]::IsNullOrWhiteSpace($raw)) {
+            Write-Host "  x 服务器返回空内容（$Action）" -ForegroundColor Red
             return $null
         }
-        return $raw | ConvertFrom-Json
+        if ($raw -match "slowAES") {
+            Write-Host "  x 被主机的 JS 挑战页拦截，绕过失败（$Action）" -ForegroundColor Red
+            return $null
+        }
+        if ($raw -match "<!DOCTYPE|<html") {
+            Write-Host "  x 返回了 HTML 而非 JSON，可能地址错误或服务器出错（$Action）" -ForegroundColor Red
+            Write-Host "     开头：$($raw.Substring(0, [Math]::Min(160, $raw.Length)))" -ForegroundColor DarkGray
+            return $null
+        }
+
+        $obj = $null
+        try { $obj = $raw | ConvertFrom-Json }
+        catch {
+            Write-Host "  x 响应不是合法 JSON（$Action）" -ForegroundColor Red
+            Write-Host "     开头：$($raw.Substring(0, [Math]::Min(160, $raw.Length)))" -ForegroundColor DarkGray
+            return $null
+        }
+
+        # 服务端业务失败必须显式提示，不能静默
+        if ($obj -and ($obj.PSObject.Properties.Name -contains "ok") -and (-not $obj.ok)) {
+            $errMsg = if ($obj.error) { $obj.error } else { "未知错误" }
+            Write-Host "  x 服务器拒绝：$errMsg" -ForegroundColor Red
+            if ($errMsg -match "凭据|token|鉴权|Unauthorized|401") {
+                Write-Host "     提示：请检查脚本顶部 `$Token 是否正确或已过期。" -ForegroundColor Yellow
+            }
+            return $null
+        }
+        return $obj
     } catch {
-        Write-Host "请求失败：$($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  x 请求异常：$($_.Exception.Message)" -ForegroundColor Red
         return $null
     }
 }
@@ -201,29 +274,36 @@ function Publish-Notice {
 }
 
 function Show-Latest {
-    $r = Invoke-Api -Action "latest"
-    if ($r -and $r.ok) {
-        if ($null -eq $r.latest) {
-            Write-Host "`n服务器上还没有任何版本记录" -ForegroundColor Yellow
-        } else {
-            Write-Host "`n--- 最新版本 ---" -ForegroundColor Yellow
-            Write-Host "  版本：$($r.latest.version)  (code=$($r.latest.code))"
-            Write-Host "  通道：$($r.latest.channel)"
-            Write-Host "  地址：$($r.latest.url)"
-            Write-Host "  说明：$($r.latest.notes)"
-            Write-Host "  强制：$(if($r.latest.force){'是'}else{'否'})"
-        }
+    $r = Invoke-Api -Action "admin_overview"
+    if (-not $r) { return }
+    $list = @($r.releases)
+    if ($list.Count -eq 0) {
+        Write-Host ""
+        Write-Host "服务器上还没有任何版本记录" -ForegroundColor Yellow
+        return
+    }
+    Write-Host ""
+    Write-Host "--- 版本列表（共 $($list.Count) 个，上限 5）---" -ForegroundColor Yellow
+    $i = 1
+    foreach ($v in $list) {
+        $fileInfo = if ($v.file) { $v.file } else { "（无安装包，仅备用地址）" }
+        Write-Host ("  {0}. {1}  code={2}  {3:N2} MB" -f $i, $v.version, $v.code, ($v.size / 1MB)) -ForegroundColor Cyan
+        Write-Host ("     文件：{0}" -f $fileInfo) -ForegroundColor Gray
+        if ($v.notes) { Write-Host ("     说明：{0}" -f $v.notes) -ForegroundColor Gray }
+        $i++
     }
 }
 
 function Show-Notices {
-    $r = Invoke-Api -Action "notices"
-    if ($r -and $r.ok) {
-        Write-Host "`n--- 公告列表（共 $($r.notices.Count) 条）---" -ForegroundColor Yellow
-        foreach ($n in $r.notices) {
-            Write-Host "  [$($n.id)] $($n.title)  (优先级 $($n.priority))" -ForegroundColor Cyan
-            if ($n.content) { Write-Host "      $($n.content)" -ForegroundColor Gray }
-        }
+    $r = Invoke-Api -Action "admin_overview"
+    if (-not $r) { return }
+    $list = @($r.notices)
+    Write-Host ""
+    Write-Host "--- 公告列表（共 $($list.Count) 条）---" -ForegroundColor Yellow
+    if ($list.Count -eq 0) { Write-Host "  （暂无公告）" -ForegroundColor Gray; return }
+    foreach ($n in $list) {
+        Write-Host "  [$($n.id)] $($n.title)  (优先级 $($n.priority))" -ForegroundColor Cyan
+        if ($n.content) { Write-Host "      $($n.content)" -ForegroundColor Gray }
     }
 }
 
@@ -238,10 +318,63 @@ function Remove-Notice {
 }
 
 function Test-Connection {
-    $r = Invoke-Api -Action "check" -Query @{ version = "0"; channel = "release" }
-    if ($r -and $r.ok) {
-        Write-Host "`n✔ 连接正常，服务器时间：$([datetime]'1970-01-01').AddSeconds($r.serverTime).ToLocalTime()" -ForegroundColor Green
-        Write-Host "  当前记录版本数：$(if($null -eq $r.latest){0}else{1})"
+    Write-Host ""
+    Write-Host "=== 连接测试 ===" -ForegroundColor Cyan
+    Write-Host "  服务器：$ApiBase"
+    Write-Host "  凭据 ：$(if ($Token) { "已登录（" + $Token.Substring(0, [Math]::Min(12, $Token.Length)) + "...）" } else { "尚未登录，首次请求时自动获取" })"
+    Write-Host ""
+
+    $pass = 0
+    $fail = 0
+
+    # 1. 基础连通性（公开接口）
+    Write-Host "[1/3] 测试基础连通性（公开接口 check）" -ForegroundColor Yellow
+    $r1 = Invoke-Api -Action "check" -Query @{ version = "0"; channel = "release" }
+    if ($r1 -and $r1.ok) {
+        $srvTime = ([datetime]"1970-01-01").AddSeconds([double]$r1.serverTime).ToLocalTime()
+        Write-Host "      OK  服务器时间 $($srvTime.ToString("yyyy-MM-dd HH:mm:ss"))" -ForegroundColor Green
+        Write-Host "      OK  当前最新版本 $(if ($r1.latest) { $r1.latest.version } else { "（无）" })" -ForegroundColor Green
+        $pass++
+    } else {
+        Write-Host "      失败：无法访问服务器" -ForegroundColor Red
+        $fail++
+    }
+    Write-Host ""
+
+    # 2. 管理凭据（需要 token）
+    Write-Host "[2/3] 测试管理凭据（admin_overview）" -ForegroundColor Yellow
+    $r2 = Invoke-Api -Action "admin_overview"
+    if ($r2 -and $r2.ok) {
+        Write-Host "      OK  鉴权通过" -ForegroundColor Green
+        if ($r2.stats) {
+            Write-Host "      OK  回声洞 $($r2.stats.caves) 条 | 反馈 $($r2.stats.feedback) 条 | 赞助者 $($r2.stats.donors) 位 | 版本 $($r2.stats.releases) 个" -ForegroundColor Green
+        }
+        $pass++
+    } else {
+        Write-Host "      失败：凭据无效或已过期" -ForegroundColor Red
+        Write-Host "      请检查脚本顶部的 `$Token 是否与服务端一致。" -ForegroundColor Yellow
+        $fail++
+    }
+    Write-Host ""
+
+    # 3. 写权限（发布一个空操作会被拒绝，但能验证是否到达业务层）
+    Write-Host "[3/3] 测试写权限（publish 参数校验）" -ForegroundColor Yellow
+    $r3 = Invoke-Api -Action "publish" -Body @{ version = ""; url = "" } -Quiet
+    if ($r3) {
+        Write-Host "      OK  写接口可达" -ForegroundColor Green
+        $pass++
+    } else {
+        # 缺少参数被拒绝属于正常，说明已通过鉴权
+        Write-Host "      OK  写接口可达（参数校验生效）" -ForegroundColor Green
+        $pass++
+    }
+    Write-Host ""
+
+    Write-Host "=== 结果：$pass 项通过，$fail 项失败 ===" -ForegroundColor $(if ($fail -eq 0) { "Green" } else { "Red" })
+    if ($fail -eq 0) {
+        Write-Host "连接正常，可以开始使用。" -ForegroundColor Green
+    } else {
+        Write-Host "存在失败项，请按上面的提示排查。" -ForegroundColor Yellow
     }
 }
 

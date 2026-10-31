@@ -6,6 +6,8 @@ Public Module ModBase
 #Region "声明"
 
     '下列版本信息由更新器自动修改
+    '程序显示名称（合规命名：以 PCL 开头 + 第三方修改后缀）
+    Public Const LauncherDisplayName As String = "Plain Craft Launcher 3 by Slate_xd"
     Public Const VersionBaseName As String = "3.00.0.1-beta" '显示用版本名（内测）
     Public Const CommitHash As String = "" 'Commit Hash，由 GitHub Workflow 自动替换
 #If RELEASE Then

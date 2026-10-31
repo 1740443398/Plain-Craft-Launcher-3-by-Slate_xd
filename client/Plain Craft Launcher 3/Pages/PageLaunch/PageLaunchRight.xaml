@@ -28,7 +28,7 @@
                                    Foreground="{DynamicResource ColorBrushWhite}" Text="欢迎回来" />
                         <TextBlock x:Name="LabWelcomeSub" FontSize="12" Margin="0,6,0,0" Opacity="0.85"
                                    Foreground="{DynamicResource ColorBrushWhite}" TextWrapping="Wrap"
-                                   Text="Plain Craft Launcher 3" />
+                                   Text="Plain Craft Launcher 3 by Slate_xd" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" MaxWidth="360" VerticalAlignment="Center" Margin="24,0,0,0">
                         <TextBlock x:Name="LabHitokoto" TextWrapping="Wrap" TextAlignment="Right" FontSize="13"
@@ -38,6 +38,22 @@
                     </StackPanel>
                 </Grid>
             </Border>
+
+            <!-- 快捷链接：GitHub / 反馈 / 投票 -->
+            <WrapPanel Margin="0,0,0,15" HorizontalAlignment="Left">
+                <local:MyButton Text="GitHub 仓库" Height="35" Margin="0,0,10,0" ColorType="Highlight"
+                                ToolTip="查看源码、提交 Issue、下载历史版本"
+                                local:CustomEventService.EventType="打开网页"
+                                local:CustomEventService.EventData="https://github.com/1740443398/Plain-Craft-Launcher-3" />
+                <local:MyButton Text="反馈问题" Height="35" Margin="0,0,10,0"
+                                ToolTip="遇到问题？去官网提交反馈"
+                                local:CustomEventService.EventType="打开网页"
+                                local:CustomEventService.EventData="https://pcl3.byethost9.com/" />
+                <local:MyButton Text="新功能投票" Height="35"
+                                ToolTip="提出你的想法，让大家投票"
+                                local:CustomEventService.EventType="打开网页"
+                                local:CustomEventService.EventData="https://pcl3.byethost9.com/vote/" />
+            </WrapPanel>
 
             <!-- 状态概览：三块统计 -->
             <Grid Margin="0,0,0,15">
