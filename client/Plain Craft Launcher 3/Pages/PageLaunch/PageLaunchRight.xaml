@@ -89,7 +89,7 @@
                 </Border>
                 <Border Grid.Column="4" CornerRadius="6" Background="{DynamicResource ColorBrushBg1}" Padding="16,13">
                     <StackPanel>
-                        <TextBlock Text="本日人品" FontSize="11" Opacity="0.6" />
+                        <TextBlock Text="今日人品" FontSize="11" Opacity="0.6" />
                         <TextBlock x:Name="LabStatJrrp" FontSize="16" FontWeight="SemiBold" Margin="0,4,0,0" Text="点我查看"
                                    Cursor="Hand" ToolTip="点击查看今日人品" />
                     </StackPanel>
