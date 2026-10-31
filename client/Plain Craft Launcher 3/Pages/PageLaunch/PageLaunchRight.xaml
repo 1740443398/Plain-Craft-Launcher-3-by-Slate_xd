@@ -39,21 +39,32 @@
                 </Grid>
             </Border>
 
-            <!-- 快捷链接：GitHub / 反馈 / 投票 -->
-            <WrapPanel Margin="0,0,0,15" HorizontalAlignment="Left">
-                <local:MyButton Text="GitHub 仓库" Height="35" Margin="0,0,10,0" ColorType="Highlight"
-                                ToolTip="查看源码、提交 Issue、下载历史版本"
-                                local:CustomEventService.EventType="打开网页"
-                                local:CustomEventService.EventData="https://github.com/1740443398/Plain-Craft-Launcher-3" />
-                <local:MyButton Text="反馈问题" Height="35" Margin="0,0,10,0"
-                                ToolTip="遇到问题？去官网提交反馈"
-                                local:CustomEventService.EventType="打开网页"
-                                local:CustomEventService.EventData="https://pcl3.byethost9.com/" />
-                <local:MyButton Text="新功能投票" Height="35"
-                                ToolTip="提出你的想法，让大家投票"
-                                local:CustomEventService.EventType="打开网页"
-                                local:CustomEventService.EventData="https://pcl3.byethost9.com/vote/" />
-            </WrapPanel>
+            <!-- 服务器公告（有内容时才显示） -->
+            <local:MyCard x:Name="PanNotice" Margin="0,0,0,15" Title="公告" Visibility="Collapsed">
+                <StackPanel x:Name="PanNoticeList" Margin="20,38,20,16" />
+            </local:MyCard>
+
+            <!-- 快捷链接：GitHub / 反馈 / 投票（与「快捷工具」同为四列等宽） -->
+            <local:MyCard Margin="0,0,0,15" Title="社区与反馈">
+                <StackPanel Margin="20,38,20,18">
+                    <UniformGrid Columns="4">
+                        <local:MyButton Margin="0,0,10,0" Height="35" Text="GitHub 仓库" ColorType="Highlight"
+                                        ToolTip="查看源码、提交 Issue、下载历史版本"
+                                        local:CustomEventService.EventType="打开网页"
+                                        local:CustomEventService.EventData="https://github.com/1740443398/Plain-Craft-Launcher-3" />
+                        <local:MyButton Margin="0,0,10,0" Height="35" Text="反馈问题"
+                                        ToolTip="遇到问题？去官网提交反馈"
+                                        local:CustomEventService.EventType="打开网页"
+                                        local:CustomEventService.EventData="https://pcl3.byethost9.com/" />
+                        <local:MyButton Margin="0,0,10,0" Height="35" Text="新功能投票"
+                                        ToolTip="提出你的想法，让大家投票"
+                                        local:CustomEventService.EventType="打开网页"
+                                        local:CustomEventService.EventData="https://pcl3.byethost9.com/vote/" />
+                        <local:MyButton Height="35" Text="更新日志" IsEnabled="False"
+                                        ToolTip="即将开放" />
+                    </UniformGrid>
+                </StackPanel>
+            </local:MyCard>
 
             <!-- 状态概览：三块统计 -->
             <Grid Margin="0,0,0,15">

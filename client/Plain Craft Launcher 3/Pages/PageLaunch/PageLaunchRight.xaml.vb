@@ -1,4 +1,4 @@
-Imports System.Windows.Threading
+﻿Imports System.Windows.Threading
 
 Public Class PageLaunchRight
     Implements IRefreshable, IDispatcherUnhandledException
@@ -11,6 +11,7 @@ Public Class PageLaunchRight
             (BuildType <> BuildTypes.Release AndAlso VersionBranchMain = "Official" AndAlso
              CurrentRank < DonationRank.Rank23 AndAlso Not Settings.Get(Of Boolean)("HintSnapshot")).ToVisibility
         RefreshSchematicViewerCard()
+        LoadNotices()
         LoadHitokoto()
         RefreshWelcome()
         RefreshStats()
@@ -553,6 +554,91 @@ Public Class PageLaunchRight
 
     Private LoadedContentHash As ULong? = Nothing
     Private LoadContentLock As New Object
+
+#End Region
+
+
+#Region "公告"
+
+    ''' <summary>
+    ''' 从服务端拉取公告并渲染到主页。失败时静默隐藏，只写日志。
+    ''' </summary>
+    Private Sub LoadNotices()
+        Try
+            If PanNotice Is Nothing Then Return
+            RunInThread(
+            Sub()
+                Try
+                    Dim List As List(Of ModUpdate.UpdateNotice) = ModUpdate.FetchNoticesForHome()
+                    RunInUi(
+                    Sub()
+                        Try
+                            RenderNotices(List)
+                        Catch ex As Exception
+                            Logger.Warn(ex, "渲染公告失败")
+                        End Try
+                    End Sub)
+                Catch ex As Exception
+                    Logger.Warn(ex, "加载公告失败")
+                End Try
+            End Sub)
+        Catch ex As Exception
+            Logger.Warn(ex, "刷新公告失败")
+        End Try
+    End Sub
+
+    ''' <summary>
+    ''' 把公告列表渲染成文字块。没有公告时整张卡片隐藏。
+    ''' </summary>
+    Private Sub RenderNotices(List As List(Of ModUpdate.UpdateNotice))
+        Try
+            If PanNotice Is Nothing OrElse PanNoticeList Is Nothing Then Return
+            PanNoticeList.Children.Clear()
+
+            If List Is Nothing OrElse List.Count = 0 Then
+                PanNotice.Visibility = Visibility.Collapsed
+                Return
+            End If
+
+            Dim First As Boolean = True
+            For Each Item In List
+                If Not First Then
+                    '分隔线
+                    PanNoticeList.Children.Add(New Border With {
+                        .Height = 1,
+                        .Margin = New Thickness(0, 12, 0, 12),
+                        .Background = New SolidColorBrush(Color.FromArgb(30, 128, 128, 128))
+                    })
+                End If
+                First = False
+
+                '标题行
+                Dim Head As New TextBlock With {
+                    .Text = Item.Title,
+                    .FontWeight = FontWeights.SemiBold,
+                    .FontSize = 14,
+                    .TextWrapping = TextWrapping.Wrap
+                }
+                PanNoticeList.Children.Add(Head)
+
+                '正文
+                If Not String.IsNullOrWhiteSpace(Item.Content) Then
+                    PanNoticeList.Children.Add(New TextBlock With {
+                        .Text = Item.Content,
+                        .Margin = New Thickness(0, 6, 0, 0),
+                        .TextWrapping = TextWrapping.Wrap,
+                        .Opacity = 0.85,
+                        .LineHeight = 20
+                    })
+                End If
+            Next
+
+            PanNotice.Visibility = Visibility.Visible
+            Logger.Info($"主页已显示 {List.Count} 条公告")
+        Catch ex As Exception
+            Logger.Warn(ex, "渲染公告失败")
+        End Try
+    End Sub
 
 #End Region
 
