@@ -160,7 +160,7 @@ Friend Module ModSecret
     End Sub
     '主题编号 -> {色相, 饱和度, 亮度修正, 顶栏色相差}
     '编号 0-4 为默认主题（始终可用），5 以上需赞助或成就解锁
-    '编号 15 为小猫绿，本版本新增，始终可用
+    '编号 15 已移除（原小猫绿，违反《PCL 存储库合理使用指南》第 5 条）
     Public ReadOnly ThemeColors As New Dictionary(Of Integer, Integer()) From {
         {0, New Integer() {210, 85, 0, 0}},   '龙猫蓝
         {1, New Integer() {180, 85, 0, 0}},   '甜柠青
@@ -176,8 +176,7 @@ Friend Module ModSecret
         {11, New Integer() {195, 80, 0, 0}},  '极客蓝
         {12, New Integer() {210, 85, 0, 30}}, '滑稽彩（动态，见 ThemeRefreshMain）
         {13, New Integer() {210, 85, 0, 30}}, '欧皇彩（动态）
-        {14, New Integer() {210, 85, 0, 0}},  '自定义（用滑条值）
-        {15, New Integer() {98, 24, -7, 0}}   '小猫绿（#5a7749）
+        {14, New Integer() {210, 85, 0, 0}}   '自定义（用滑条值）
     }
 
     ''' <summary>
@@ -201,17 +200,7 @@ Friend Module ModSecret
             '沿用 PCL 原版的赞助解锁机制（《PCL 存储库合理使用指南》第 5 条要求）。
             '主题 0~4 为默认蓝色系，5 以上需通过赞助或成就解锁，解锁记录存于 UiLauncherThemeHide2。
             '此处只做读取与校验，不主动写入，避免绕过原版的解锁门槛。
-            Dim Unlocked As New List(Of String)(Settings.Get(Of String)("UiLauncherThemeHide2").ToString.Split("|"c))
-            '小猫绿为本版本新增主题，直接解锁，不受赞助门槛限制
-            Dim Changed As Boolean = False
-            If Not Unlocked.Contains("15") Then
-                Unlocked.Add("15")
-                Changed = True
-            End If
-            If Changed Then
-                Settings.Set("UiLauncherThemeHide2", Unlocked.Distinct().Join("|"c))
-                Logger.Info("已解锁小猫绿主题")
-            End If
+            Dim Unlocked As String() = Settings.Get(Of String)("UiLauncherThemeHide2").ToString.Split("|"c)
             Dim Valid As New List(Of String)
             For Each Item In Unlocked
                 Dim Id As Integer = 0
@@ -219,7 +208,15 @@ Friend Module ModSecret
                     Valid.Add(Item)
                 End If
             Next
-            Logger.Info($"已解锁主题 {Valid.Count} 个（默认 5 个 + 小猫绿始终可用）")
+            '发布版：若当前保存的主题不是蓝色系，回退到龙猫蓝（0）
+            If Not AllowAllThemes Then
+                Dim Cur As Integer = Settings.Get(Of Integer)("UiLauncherTheme")
+                If Not BlueThemes.Contains(Cur) Then
+                    Settings.Set("UiLauncherTheme", 0)
+                    Logger.Info($"发布版不允许非蓝色系主题，已从 {Cur} 回退到龙猫蓝")
+                End If
+            End If
+            Logger.Info($"已解锁主题 {Valid.Count} 个")
         Catch ex As Exception
             Logger.Warn(ex, "同步主题解锁状态失败")
         End Try
@@ -228,11 +225,17 @@ Friend Module ModSecret
     ''' <summary>
     ''' 判断某个隐藏主题是否已解锁。
     ''' </summary>
+    ''' <summary>
+    ''' 蓝色系主题编号（色相 180~260）。发布版只允许这几个。
+    ''' </summary>
+    Public ReadOnly BlueThemes As New HashSet(Of Integer) From {0, 1, 11}
+
     Friend Function ThemeCheckOne(Id As Integer) As Boolean
         Try
-            '默认主题（0~4）与小猫绿（15）始终可用，其余需赞助或成就解锁
+            '发布版：只允许蓝色系，其余一律视为不可用（合规要求）
+            If Not AllowAllThemes AndAlso Not BlueThemes.Contains(Id) Then Return False
+            '默认主题（0~4）始终可用，其余需赞助或成就解锁
             If Id <= 4 Then Return True
-            If Id = 15 Then Return True
             Dim Unlocked As String() = Settings.Get(Of String)("UiLauncherThemeHide2").ToString.Split("|"c)
             Return Unlocked.Contains(Id.ToString())
         Catch ex As Exception
@@ -247,6 +250,9 @@ Friend Module ModSecret
     Friend Function ThemeUnlock(Id As Integer, Optional ShowDoubleHint As Boolean = True, Optional UnlockHint As String = Nothing) As Boolean
         Try
             If Id <= 4 Then Return True
+            '发布版不允许非蓝色系主题：直接静默返回，不写设置也不弹提示。
+            '否则每次登录都会因为「解锁了不可用的主题」而重复弹窗。
+            If Not AllowAllThemes AndAlso Not BlueThemes.Contains(Id) Then Return False
             If ThemeCheckOne(Id) Then
                 If ShowDoubleHint Then Hint(If(UnlockHint, $"该主题已经解锁过了：{GetThemeName(Id)}"), HintType.Blue)
                 Return False
@@ -282,7 +288,6 @@ Friend Module ModSecret
             Case 12 : Return "滑稽彩"
             Case 13 : Return "欧皇彩"
             Case 14 : Return "自定义"
-            Case 15 : Return "小猫绿"
             Case Else : Return $"主题 {Id}"
         End Select
     End Function
