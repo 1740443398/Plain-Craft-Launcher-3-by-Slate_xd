@@ -1,0 +1,11 @@
+* text=auto
+*.vb   text eol=crlf
+*.xaml text eol=crlf
+*.vbproj text eol=crlf
+*.sln  text eol=crlf
+*.php  text eol=lf
+*.html text eol=lf
+*.ps1  text eol=crlf
+*.ico  binary
+*.png  binary
+*.jpg  binary

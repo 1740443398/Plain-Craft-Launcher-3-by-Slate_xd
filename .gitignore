@@ -1,0 +1,35 @@
+# 构建产物
+[Bb]in/
+[Oo]bj/
+*.exe
+*.pdb
+*.dll
+*.cache
+*.resources
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# 运行时数据
+server/api/data/
+server/api/*.log
+server/token.txt
+
+# 敏感配置
+*.secret
+.env
+appsettings.local.json
+
+# 压缩包
+*.zip
+*.7z
+*.rar
+
+# 系统
+Thumbs.db
+Desktop.ini
+.DS_Store
