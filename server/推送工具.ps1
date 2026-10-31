@@ -142,7 +142,7 @@ function Ensure-Login {
 }
 
 function Invoke-Api {
-    param([string]$Action, [hashtable]$Body = @{}, [hashtable]$Query = @{}, [switch]$Quiet)
+    param([string]$Action, [hashtable]$Body = @{}, [hashtable]$Query = @{}, [switch]$Quiet, [switch]$ExpectFail)
 
     $url = $ApiBase + "?action=" + $Action
     foreach ($k in $Query.Keys) { $url += "&$k=" + [uri]::EscapeDataString([string]$Query[$k]) }
@@ -192,9 +192,11 @@ function Invoke-Api {
         # 服务端业务失败必须显式提示，不能静默
         if ($obj -and ($obj.PSObject.Properties.Name -contains "ok") -and (-not $obj.ok)) {
             $errMsg = if ($obj.error) { $obj.error } else { "未知错误" }
+            # -ExpectFail：调用方本就预期失败（如参数校验测试），把结果交回去自行判断
+            if ($ExpectFail) { return $obj }
             Write-Host "  x 服务器拒绝：$errMsg" -ForegroundColor Red
             if ($errMsg -match "凭据|token|鉴权|Unauthorized|401") {
-                Write-Host "     提示：请检查脚本顶部 `$Token 是否正确或已过期。" -ForegroundColor Yellow
+                Write-Host "     提示：请检查脚本顶部的密码是否正确，或登录是否已过期。" -ForegroundColor Yellow
             }
             return $null
         }
@@ -358,15 +360,21 @@ function Test-Connection {
     Write-Host ""
 
     # 3. 写权限（发布一个空操作会被拒绝，但能验证是否到达业务层）
-    Write-Host "[3/3] 测试写权限（publish 参数校验）" -ForegroundColor Yellow
-    $r3 = Invoke-Api -Action "publish" -Body @{ version = ""; url = "" } -Quiet
-    if ($r3) {
-        Write-Host "      OK  写接口可达" -ForegroundColor Green
+    # 3. 写权限：发一个空参数请求，看服务端是「鉴权失败」还是「参数校验失败」
+    Write-Host "[3/3] 测试写权限（publish）" -ForegroundColor Yellow
+    $r3 = Invoke-Api -Action "publish" -Body @{ version = ""; url = "" } -Quiet -ExpectFail
+    if ($r3 -and $r3.ok) {
+        # 理论上不该成功，成功了说明服务端没做校验，反而是问题
+        Write-Host "      !  写接口未做参数校验（异常）" -ForegroundColor Yellow
+    } elseif ($r3 -and $r3.error -match "缺少") {
+        Write-Host "      OK  写接口可达（已通过鉴权，服务端正确拒绝空参数）" -ForegroundColor Green
         $pass++
+    } elseif ($r3 -and $r3.error -match "未登录|凭据|token|鉴权") {
+        Write-Host "      失败：写权限不足，$($r3.error)" -ForegroundColor Red
+        $fail++
     } else {
-        # 缺少参数被拒绝属于正常，说明已通过鉴权
-        Write-Host "      OK  写接口可达（参数校验生效）" -ForegroundColor Green
-        $pass++
+        Write-Host "      失败：无法判断写接口状态" -ForegroundColor Red
+        $fail++
     }
     Write-Host ""
 
