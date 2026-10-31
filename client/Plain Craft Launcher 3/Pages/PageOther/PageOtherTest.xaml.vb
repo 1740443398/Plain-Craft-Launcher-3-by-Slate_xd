@@ -234,15 +234,30 @@
         Dim SeedB As ULong = ("QWERTY" & ModBase.Identify & "0*8&6" & Date.Now.Day.ToString() & "kjhg").GetStableHashCode()
         Dim Raw As Integer = CInt(Math.Round(Math.Abs((CDbl(SeedA) / 3.0 + CDbl(SeedB) / 3.0) / 527.0) Mod 1001.0))
         'PCL3 调整：原版把 Raw(0~1000) 均匀映射到 0~99，平均只有 51 分，
-        '近六成情况低于 60 分，容易影响心情。改为整体上移到 80~100 区间，
-        '同时保留满分与 99 分的稀有度（约 0.6% 与 1%）。
+        '近六成情况低于 60 分，容易影响心情。
+        '改为分档映射：绝大多数落在 80 分以上，分数越低越罕见，但 0 分仍然可达。
+        '  80~100 分：约 92%（其中 100 分约 1.2%）
+        '  60~ 79 分：约  5%
+        '  30~ 59 分：约  2%
+        '  10~ 29 分：约 0.7%
+        '   0~  9 分：约 0.4%
         Dim Score As Integer
-        If Raw >= 995 Then
-            Score = 100
-        ElseIf Raw >= 985 Then
-            Score = 99
+        If Raw <= 919 Then
+            '92%：80~100，平方曲线让高分更稀有
+            Dim T As Double = CDbl(Raw) / 919.0
+            Score = 80 + CInt(Math.Round(20.0 * T * T))
+        ElseIf Raw <= 969 Then
+            '5%：60~79
+            Score = 60 + CInt(Math.Round(19.0 * (Raw - 920) / 49.0))
+        ElseIf Raw <= 989 Then
+            '2%：30~59
+            Score = 30 + CInt(Math.Round(29.0 * (Raw - 970) / 19.0))
+        ElseIf Raw <= 996 Then
+            '0.7%：10~29
+            Score = 10 + CInt(Math.Round(19.0 * (Raw - 990) / 6.0))
         Else
-            Score = CInt(Math.Round(80.0 + CDbl(Raw) / 984.0 * 18.0))
+            '0.4%：0~9
+            Score = CInt(Math.Round(9.0 * (Raw - 997) / 3.0))
         End If
         Dim Tail As String
         If Score = 100 Then
