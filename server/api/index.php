@@ -42,6 +42,21 @@ header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
 
+/**
+ * 推断本站基础地址（协议 + 域名 + 路径）。
+ * 不硬编码域名，换部署环境后自动适配。
+ */
+function siteBase() {
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+          || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+          || intval($_SERVER['SERVER_PORT'] ?? 0) === 443;
+    $scheme = $https ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $dir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+    if (substr($dir, -4) === '/api') $dir = substr($dir, 0, -4);
+    return $scheme . '://' . $host . $dir;
+}
+
 function respond($data, $code = 200) {
     http_response_code($code);
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -723,6 +738,15 @@ switch ($action) {
     case 'vote_page':
         // 投票已内嵌到首页，不再单独跳 /vote/
         header('Location: https://pcl3.byethost9.com/#vote', true, 302);
+        exit;
+
+    // ---------- 反馈页 / 查询页跳转（客户端引流用） ----------
+    case 'feedback_page':
+        header('Location: ' . siteBase() . '/#feedback', true, 302);
+        exit;
+
+    case 'track_page':
+        header('Location: ' . siteBase() . '/#track', true, 302);
         exit;
 
     // ---------- 新功能投票：列表（公开） ----------
