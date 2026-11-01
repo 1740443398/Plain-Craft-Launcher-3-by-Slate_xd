@@ -6,7 +6,7 @@ Public Module ModUpdate
     ''' <summary>
     ''' 更新与公告接口地址。
     ''' </summary>
-    Public Const ApiBase As String = "https://pcl3.byethost9.com/api/"
+    Public Const ApiBase As String = "https://pcl3.byethost9.com/api/index.php"
 
     ''' <summary>
     ''' 当前版本对应的数字码，用于服务端比较。
