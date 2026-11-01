@@ -655,10 +655,11 @@ document.querySelectorAll('.nav-btn').forEach(b => {
   };
 });
 
-/* 支持 #vote 之类的锚点直达 */
-if (location.hash === '#vote') {
-  document.addEventListener('DOMContentLoaded', function () { goTab('vote'); });
-}
+/* 支持 #vote / #feedback / #track 锚点直达 */
+document.addEventListener('DOMContentLoaded', function () {
+  const h = (location.hash || '').replace('#', '');
+  if (h === 'vote' || h === 'feedback' || h === 'track') goTab(h);
+});
 
 function goTab(name) {
   const b = document.querySelector('.nav-btn[data-tab="' + name + '"]');
