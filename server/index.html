@@ -311,6 +311,43 @@
     .hs-item .n { font-size: 20px; }
     .cave-stage { padding: 20px 20px 18px; }
   }
+
+  /* ---------- 新功能投票 ---------- */
+  .idea {
+    display: flex; gap: 14px; padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .idea:last-child { border-bottom: 0; padding-bottom: 0; }
+  .idea:first-child { padding-top: 0; }
+  .idea-votes {
+    flex: none; width: 56px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+  }
+  .idea-votes .n {
+    font-size: 20px; font-weight: 650; letter-spacing: -.03em;
+    font-variant-numeric: tabular-nums; color: var(--accent);
+    line-height: 1.1;
+  }
+  .idea-body { flex: 1; min-width: 0; }
+  .idea-body .t { font-size: 14.5px; font-weight: 600; margin-bottom: 5px; }
+  .idea-body .d {
+    font-size: 13px; color: var(--text-2); line-height: 1.68;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .idea-body .m {
+    font-size: 12px; color: var(--text-3); margin-top: 8px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  }
+  .tag {
+    display: inline-block; padding: 2px 9px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 500;
+    background: var(--violet-soft, #f1ecfd); color: var(--violet, #6d28d9);
+  }
+  .empty { padding: 36px 16px; text-align: center; color: var(--text-3); font-size: 13.5px; }
+  .btn-vote { height: 30px; padding: 0 13px; font-size: 12.5px; }
+  .btn-voted { background: var(--ok-soft, #e6f6ef); color: var(--ok, #047857); border: 1px solid #b7e4c9; }
+  .btn-voted:disabled { opacity: 1; cursor: default; }
+
 </style>
 </head>
 <body>
@@ -370,10 +407,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       查询进度
     </button>
-    <a class="nav-btn nav-link" href="vote/">
+    <button class="nav-btn" data-tab="vote">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
       新功能投票
-    </a>
+    </button>
   </div>
 
   <!-- ==================== 回声洞 ==================== -->
@@ -528,6 +565,58 @@
     </div>
   </div>
 
+  <!-- ==================== 新功能投票 ==================== -->
+  <div class="panel" id="panel-vote">
+    <div class="card card-accent">
+      <div class="card-head">
+        <h2>提交新想法</h2>
+        <div class="spacer"></div>
+        <span class="badge badge-violet" id="voteCount">—</span>
+      </div>
+      <p class="sub">描述你希望加入的功能。提交后会显示在下方列表，所有人都能看到并投票支持。</p>
+
+      <div class="field">
+        <label>功能标题 <span class="opt">一句话说明</span></label>
+        <input type="text" id="vTitle" maxlength="80" placeholder="例如：支持导入 MultiMC 整合包">
+      </div>
+
+      <div class="field">
+        <label>详细说明 <span class="opt">选填</span></label>
+        <textarea id="vDesc" maxlength="1000" placeholder="这个功能解决什么问题？你希望它怎么工作？"></textarea>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>分类</label>
+          <select id="vCat">
+            <option>启动相关</option>
+            <option>下载相关</option>
+            <option>界面相关</option>
+            <option>模组相关</option>
+            <option selected>其他</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>QQ 号 <span class="opt">选填，采纳后通知你</span></label>
+          <input type="text" id="vQq" maxlength="12" inputmode="numeric" placeholder="123456789">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btnVoteSubmit">提交想法</button>
+      <div class="msg" id="vMsg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>大家的想法</h2>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost btn-sm" id="btnVoteRefresh">刷新</button>
+      </div>
+      <p class="sub" id="vSub">正在加载……</p>
+      <div id="vList"></div>
+    </div>
+  </div>
+
   <div class="foot">
     Plain Craft Launcher 3 · 二次修改版，由 蕭遞 维护<span class="sep">·</span>
     原始作品版权归成都瓜皮龙科技有限公司所有
@@ -562,8 +651,14 @@ document.querySelectorAll('.nav-btn').forEach(b => {
     b.classList.add('on');
     $('panel-' + b.dataset.tab).classList.add('on');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (b.dataset.tab === 'vote' && !window.__voteLoaded) { window.__voteLoaded = true; loadVotes(); }
   };
 });
+
+/* 支持 #vote 之类的锚点直达 */
+if (location.hash === '#vote') {
+  document.addEventListener('DOMContentLoaded', function () { goTab('vote'); });
+}
 
 function goTab(name) {
   const b = document.querySelector('.nav-btn[data-tab="' + name + '"]');
@@ -811,6 +906,93 @@ $('btnTk').onclick = async () => {
 };
 
 $('tkId').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnTk').click(); });
+
+/* ==================== 新功能投票 ==================== */
+
+function votedSet() {
+  try { return new Set(JSON.parse(localStorage.getItem("pcl3_voted") || "[]")); }
+  catch { return new Set(); }
+}
+function markVoted(id) {
+  const s = votedSet();
+  s.add(id);
+  localStorage.setItem("pcl3_voted", JSON.stringify([...s]));
+}
+
+async function loadVotes() {
+  try {
+    const j = await get("vote_list");
+    if (!j.ok) { $("vSub").textContent = "加载失败：" + (j.error || "未知错误"); return; }
+    const list = j.ideas || [];
+    $("voteCount").textContent = list.length + " 个想法";
+    $("vSub").textContent = list.length
+      ? "共 " + list.length + " 个想法，按票数排序。点「支持」为喜欢的想法投票。"
+      : "还没有人提交想法，来当第一个吧";
+
+    if (!list.length) { $("vList").innerHTML = '<div class="empty">暂无想法</div>'; return; }
+
+    const voted = votedSet();
+    $("vList").innerHTML = list.map(it => {
+      const has = voted.has(it.id);
+      const meta = [];
+      if (it.category) meta.push('<span class="tag">' + esc(it.category) + "</span>");
+      if (it.time) meta.push(new Date(it.time * 1000).toLocaleDateString("zh-CN"));
+      return '<div class="idea">' +
+        '<div class="idea-votes">' +
+          '<div class="n">' + (it.votes || 0) + "</div>" +
+          '<button class="btn btn-vote ' + (has ? "btn-voted" : "btn-ghost") + '" data-vote="' + esc(it.id) + '"' +
+            (has ? " disabled" : "") + ">" + (has ? "已支持" : "支持") + "</button>" +
+        "</div>" +
+        '<div class="idea-body">' +
+          '<div class="t">' + esc(it.title) + "</div>" +
+          (it.desc ? '<div class="d">' + esc(it.desc) + "</div>" : "") +
+          '<div class="m">' + meta.join("") + "</div>" +
+        "</div>" +
+      "</div>";
+    }).join("");
+
+    $("vList").querySelectorAll("[data-vote]").forEach(b => {
+      b.onclick = async () => {
+        const id = b.dataset.vote;
+        b.disabled = true;
+        const r = await post("vote", { id });
+        if (!r.ok) { toast("投票失败：" + (r.error || "未知错误")); b.disabled = false; return; }
+        markVoted(id);
+        toast("已支持这个想法");
+        await loadVotes();
+      };
+    });
+  } catch (e) {
+    $("vSub").textContent = "加载失败：" + e.message;
+  }
+}
+
+$("btnVoteSubmit").onclick = async () => {
+  const title = $("vTitle").value.trim();
+  const desc = $("vDesc").value.trim();
+  const category = $("vCat").value;
+  const qq = $("vQq").value.trim();
+  if (!title) return showMsg("vMsg", "请填写功能标题", "err");
+
+  const btn = $("btnVoteSubmit");
+  btn.disabled = true;
+  try {
+    const j = await post("vote_submit", { title, desc, category, qq });
+    if (!j.ok) return showMsg("vMsg", "提交失败：" + (j.error || "未知错误"), "err");
+    showMsg("vMsg", "提交成功！你的想法已显示在下方列表。", "ok");
+    $("vTitle").value = "";
+    $("vDesc").value = "";
+    $("vQq").value = "";
+    await loadVotes();
+  } catch (e) {
+    showMsg("vMsg", "提交失败：" + e.message, "err");
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+$("btnVoteRefresh").onclick = loadVotes;
+
 </script>
 </body>
 </html>
