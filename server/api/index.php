@@ -994,6 +994,8 @@ switch ($action) {
             $active[] = $n;
         }
         usort($active, fn($a, $b) => (($b['priority'] ?? 0) - ($a['priority'] ?? 0)) ?: (($b['time'] ?? 0) - ($a['time'] ?? 0)));
+        // 只返回前 5 条（优先级高的在前，同优先级按时间倒序）
+        $active = array_slice($active, 0, 5);
         // 为最新版补上可直接下载的地址（服务器自存优先，外部 url 作为备用）
         if ($best !== null) {
             $dl = [];
