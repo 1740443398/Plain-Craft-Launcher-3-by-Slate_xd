@@ -297,16 +297,38 @@
     <div class="stats" id="stats"></div>
 
     <div class="tabs">
-      <button class="tab on" data-tab="feedback">反馈<span class="cnt" id="cntFb">0</span></button>
+      <button class="tab on" data-tab="dash">仪表盘</button>
+      <button class="tab" data-tab="feedback">反馈<span class="cnt" id="cntFb">0</span></button>
       <button class="tab" data-tab="caves">回声洞<span class="cnt" id="cntCv">0</span></button>
       <button class="tab" data-tab="donors">赞助者</button>
       <button class="tab" data-tab="notices">公告</button>
       <button class="tab" data-tab="releases">版本</button>
       <button class="tab" data-tab="mail">邮件</button>
+      <button class="tab" data-tab="votes">投票<span class="cnt" id="cntVt">0</span></button>
+    </div>
+
+    <!-- 仪表盘 -->
+    <div class="panel on" id="panel-dash">
+      <div class="card">
+        <div class="card-head"><h2>数据总览</h2><div class="spacer"></div>
+          <button class="btn btn-ghost btn-sm" id="dashRefresh">刷新</button>
+        </div>
+        <div class="card-body" id="dashBody">正在加载……</div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>最近反馈</h2></div>
+        <div id="dashRecentFb"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>热门投票</h2></div>
+        <div id="dashTopVotes"></div>
+      </div>
     </div>
 
     <!-- 反馈 -->
-    <div class="panel on" id="panel-feedback">
+    <div class="panel" id="panel-feedback">
       <div class="card">
         <div class="card-head"><h2>反馈列表</h2><div class="spacer"></div>
           <select class="sel-status" id="fbFilter">
@@ -423,6 +445,15 @@
             <div class="k">失败处理</div><div class="v">静默跳过，不影响提交结果，记录到 data/_smtp.log</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 投票 -->
+    <div class="panel" id="panel-votes">
+      <div class="card">
+        <div class="card-head"><h2>新功能投票</h2><div class="spacer"></div>
+          <span class="muted" id="voteMeta"></span></div>
+        <div id="voteTable"></div>
       </div>
     </div>
   </div>
@@ -548,6 +579,8 @@ async function loadAll() {
     renderNotices(j.notices);
     renderReleases(j.releases);
     renderMail(j);
+    renderDash(j);
+    renderVotes(j.ideas || []);
   } catch (e) { /* 401 已处理 */ }
 }
 
@@ -565,6 +598,115 @@ function renderStats(s) {
   ).join('');
   $('cntFb').textContent = s.feedback_open ?? 0;
   $('cntCv').textContent = s.caves ?? 0;
+  $('cntVt').textContent = s.ideas ?? 0;
+}
+/* ---------- 仪表盘 ---------- */
+function renderDash(j) {
+  const s = j.stats || {};
+  const now = new Date();
+
+  const cards = [
+    ['待处理反馈', s.feedback_open ?? 0, '条', 's-warn'],
+    ['反馈总数', s.feedback ?? 0, '条', ''],
+    ['回声洞', s.caves ?? 0, '条', 's-violet'],
+    ['投票想法', s.ideas ?? 0, '个', 's-ok'],
+    ['总票数', s.votes_total ?? 0, '票', 's-ok'],
+    ['赞助者', s.donors ?? 0, '位', ''],
+    ['公告', s.notices ?? 0, '条', ''],
+    ['版本', s.releases ?? 0, '个', ''],
+  ];
+
+  const cardsHtml = cards.map(function (c) {
+    return '<div class="stat ' + c[3] + '"><div class="k">' + c[0] +
+           '</div><div class="v">' + c[1] + '<span class="u">' + c[2] + '</span></div></div>';
+  }).join('');
+
+  const smtpText = j.smtp_enabled ? ('已启用 · ' + (j.smtp_host || '')) : '未配置';
+
+  $('dashBody').innerHTML =
+    '<div class="stats" style="margin-bottom:16px">' + cardsHtml + '</div>' +
+    '<div class="kv">' +
+      '<div class="k">SMTP</div><div class="v">' + esc(smtpText) + '</div>' +
+      '<div class="k">统计时间</div><div class="v">' + now.toLocaleString('zh-CN') + '</div>' +
+    '</div>';
+
+  const pending = (j.feedback || []).filter(function (f) {
+    return f.status === 'open' || f.status === 'confirmed';
+  }).slice(0, 5);
+
+  if (!pending.length) {
+    $('dashRecentFb').innerHTML = '<div class="empty">没有待处理的反馈</div>';
+  } else {
+    $('dashRecentFb').innerHTML = pending.map(function (f) {
+      return '<div style="padding:10px 0;border-bottom:1px solid var(--line)">' +
+        '<div style="font-weight:500;margin-bottom:3px">' + esc(f.title) + '</div>' +
+        '<div class="muted" style="font-size:12.5px">' +
+          esc((f.content || '').slice(0, 80)) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  const top = (j.ideas || []).slice().sort(function (a, b) {
+    return (b.votes || 0) - (a.votes || 0);
+  }).slice(0, 5);
+
+  if (!top.length) {
+    $('dashTopVotes').innerHTML = '<div class="empty">还没有人提交想法</div>';
+  } else {
+    $('dashTopVotes').innerHTML = top.map(function (it, i) {
+      return '<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)">' +
+        '<div style="flex:none;width:26px;font-weight:650;color:var(--accent)">' + (i + 1) + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-weight:500">' + esc(it.title) + '</div>' +
+          '<div class="muted" style="font-size:12px;margin-top:2px">' +
+            esc(it.category || '其他') + '</div>' +
+        '</div>' +
+        '<div style="flex:none;font-weight:650;color:var(--accent)">' +
+          (it.votes || 0) + ' 票</div>' +
+      '</div>';
+    }).join('');
+  }
+}
+
+/* ---------- 投票 ---------- */
+function renderVotes(list) {
+  $('voteMeta').textContent = list.length + ' 个想法';
+
+  if (!list.length) {
+    $('voteTable').innerHTML = '<div class="empty">还没有人提交想法</div>';
+    return;
+  }
+
+  const head = '<table><thead><tr>' +
+    '<th>#</th><th>标题 / 说明</th><th>分类</th><th>票数</th>' +
+    '<th>QQ</th><th>提交时间</th><th></th>' +
+    '</tr></thead><tbody>';
+
+  const rows = list.map(function (it, i) {
+    const time = it.time ? new Date(it.time * 1000).toLocaleString('zh-CN') : '-';
+    return '<tr>' +
+      '<td class="mono">' + (i + 1) + '</td>' +
+      '<td><div style="font-weight:500;margin-bottom:2px">' + esc(it.title) + '</div>' +
+        '<div class="muted clamp">' + esc(it.desc || '（无说明）') + '</div></td>' +
+      '<td>' + esc(it.category || '其他') + '</td>' +
+      '<td class="mono" style="font-weight:650;color:var(--accent)">' + (it.votes || 0) + '</td>' +
+      '<td class="mono">' + esc(it.qq || '-') + '</td>' +
+      '<td class="mono">' + time + '</td>' +
+      '<td><button class="btn btn-ghost btn-sm btn-danger" data-del-vote="' +
+        esc(it.id) + '">删除</button></td>' +
+    '</tr>';
+  }).join('');
+
+  $('voteTable').innerHTML = head + rows + '</tbody></table>';
+
+  $('voteTable').querySelectorAll('[data-del-vote]').forEach(function (b) {
+    b.onclick = async function () {
+      if (!confirm('确定删除这个想法？')) return;
+      const r = await api('vote_delete', { id: b.dataset.delVote });
+      if (r && r.ok) { toast('已删除'); loadAll(); }
+      else { toast('删除失败'); }
+    };
+  });
 }
 
 /* ---------- 反馈 ---------- */
@@ -891,7 +1033,7 @@ async function renderMail(j) {
     '<div class="k">状态</div><div class="v"><span class="pill ' + (j.smtp_enabled ? "pill-ok" : "pill-err") + '">' +
     (j.smtp_enabled ? "已启用" : "已关闭") + "</span></div>" +
     '<div class="k">服务器</div><div class="v mono">' + esc(j.smtp_host || "") + "</div>" +
-    '<div class="k">发信邮箱</div><div class="v mono">YOUR_EMAIL@example.com</div>' +
+    '<div class="k">发信邮箱</div><div class="v mono">1740443398@qq.com</div>' +
     "</div>";
 }
 
