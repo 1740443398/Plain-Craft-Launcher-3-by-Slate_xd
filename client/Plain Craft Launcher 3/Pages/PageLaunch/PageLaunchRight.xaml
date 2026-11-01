@@ -59,7 +59,7 @@
                         <local:MyButton Margin="0,0,10,0" Height="35" Text="新功能投票"
                                         ToolTip="提出你的想法，让大家投票"
                                         local:CustomEventService.EventType="打开网页"
-                                        local:CustomEventService.EventData="https://pcl3.byethost9.com/vote/" />
+                                        local:CustomEventService.EventData="https://pcl3.byethost9.com/#vote" />
                         <local:MyButton Height="35" Text="更新日志" IsEnabled="False"
                                         ToolTip="即将开放" />
                     </UniformGrid>
