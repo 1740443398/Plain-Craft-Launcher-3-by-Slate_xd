@@ -1,12 +1,12 @@
 ﻿'PCL3 更新检查与公告
-'不再使用原版 PCL 的更新源，改为自建服务端（pcl3.byethost9.com）。
+'不再使用原版 PCL 的更新源，改为可自行部署的服务端。
 '服务端是一个 PHP 接口，返回 JSON；这里负责拉取、解析与提示。
 Public Module ModUpdate
 
     ''' <summary>
     ''' 更新与公告接口地址。
     ''' </summary>
-    Public Const ApiBase As String = "https://pcl3.byethost9.com/api/index.php"
+    Public Const ApiBase As String = "https://your-domain.example/api/"
 
     ''' <summary>
     ''' 当前版本对应的数字码，用于服务端比较。
@@ -56,17 +56,11 @@ Public Module ModUpdate
         Public Notices As New List(Of UpdateNotice)
     End Class
 
-    ''' <summary>
-    ''' 主页最多显示的公告条数。
-    ''' </summary>
-    Public Const MaxNoticeCount As Integer = 5
-
     Public Class UpdateNotice
         Public Id As String = ""
         Public Title As String = ""
         Public Content As String = ""
         Public Priority As Integer
-        Public Time As Long
     End Class
 
     ''' <summary>
@@ -131,8 +125,7 @@ Public Module ModUpdate
                         .Id = If(Obj("id")?.ToString(), ""),
                         .Title = If(Obj("title")?.ToString(), ""),
                         .Content = If(Obj("content")?.ToString(), ""),
-                        .Priority = If(Obj("priority")?.ToObject(Of Integer)(), 0),
-                        .Time = If(Obj("time")?.ToObject(Of Long)(), 0L)
+                        .Priority = If(Obj("priority")?.ToObject(Of Integer)(), 0)
                     })
                 Next
             End If
@@ -189,14 +182,7 @@ Public Module ModUpdate
         Try
             Dim Result As UpdateCheckResult = CheckUpdate()
             If Result Is Nothing Then Return New List(Of UpdateNotice)
-            Dim Raw As List(Of UpdateNotice) = If(Result.Notices, New List(Of UpdateNotice))
-            '本地再排一次序，防止服务端未排序或客户端解析顺序变化：
-            '优先级高的排前面，同优先级按时间倒序（新的在前）。
-            Dim Sorted = (From N In Raw
-                          Order By N.Priority Descending, N.Time Descending
-                          Take MaxNoticeCount).ToList()
-            Logger.Info($"公告：服务端返回 {Raw.Count} 条，排序后取前 {Sorted.Count} 条")
-            Return Sorted
+            Return Result.Notices
         Catch ex As Exception
             Logger.Warn(ex, "拉取公告失败")
             Return New List(Of UpdateNotice)

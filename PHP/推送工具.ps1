@@ -4,7 +4,7 @@
 # 首次使用请修改下面的 $ApiBase、$Password、$ClientKey
 # token 会在运行时自动登录获取，无需手填
 
-$ApiBase   = "https://pcl3.byethost9.com/api/"
+$ApiBase   = "https://your-domain.example/api/"
 # 管理员密码（用于自动登录换取 token，token 有效期 12 小时）
 $Password  = $env:PCL3_ADMIN_PASSWORD   # 从环境变量读取
 # 客户端 Key（公开接口需要，与客户端 ModByethost.vb 一致）

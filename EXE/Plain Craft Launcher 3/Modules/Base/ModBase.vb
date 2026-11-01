@@ -10,6 +10,14 @@ Public Module ModBase
     Public Const LauncherDisplayName As String = "Plain Craft Launcher 3 by Slate_xd"
     Public Const VersionBaseName As String = "3.00.0.1-beta" '显示用版本名（内测）
     Public Const CommitHash As String = "" 'Commit Hash，由 GitHub Workflow 自动替换
+
+    ''' <summary>
+    ''' 是否允许蓝色系以外的主题。
+    ''' False = 发布版（遵守《PCL 存储库合理使用指南》第 5 条，仅蓝色系可用）
+    ''' True  = 自用版（不受分发限制，保留全部配色）
+    ''' 修改此处后重新编译即可切换。
+    ''' </summary>
+    Public Const AllowAllThemes As Boolean = True
 #If RELEASE Then
     Public Const VersionCode As Integer = 415 '内测版
 #Else

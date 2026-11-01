@@ -34,7 +34,7 @@
                         </Image.Clip>
                     </Image>
                     <local:MyImage x:Name="ImgXiaoDi" Source="/Plain Craft Launcher 3;component/Images/Heads/XiaoDi.jpg" Grid.Row="1" Margin="3"
-                                   ToolTip="头像来自 QQ 1740443398，运行时自动更新">
+                                   ToolTip="头像在运行时从网络自动更新">
                         <Image.Clip>
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
                         </Image.Clip>

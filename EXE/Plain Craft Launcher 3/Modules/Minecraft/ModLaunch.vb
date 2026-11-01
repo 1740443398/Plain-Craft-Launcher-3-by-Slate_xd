@@ -918,12 +918,25 @@ LoginFinish:
     '阻塞式输入弹窗封装，复用 PCL 自带的 MyMsgInput 控件。
     '取消时返回 Nothing。
     Public Function MyMsgInputBox(Caption As String, Title As String) As String
-        '统一走 MyMsgBoxInput：它用 Dispatcher.PushFrame 等待，能在 UI 线程安全调用。
-        '原实现用 Thread.Sleep(50) 忙等，若在 UI 线程调用会阻塞消息循环，
-        '弹窗永远等不到用户点击，表现为程序卡死。
-        Return MyMsgBoxInput(Title, Caption, "",
-                              New ObjectModel.Collection(Of Validate) From {New ValidateNullOrWhiteSpace()},
-                              "", "确定", "取消")
+        Dim Converter As New MyMsgBoxConverter With {
+            .Type = MyMsgBoxType.Input,
+            .Title = Title,
+            .Text = Caption,
+            .Content = "",
+            .HintText = "在此粘贴完整网址",
+            .Button1 = "确定",
+            .Button2 = "取消",
+            .ForceWait = True,
+            .ValidateRules = New ObjectModel.Collection(Of Validate) From {New ValidateNullOrWhiteSpace()}
+        }
+        WaitingMyMsgBox.Enqueue(Converter)
+        '注意：点取消时 Result 保持 Nothing 而 IsExited 变为 True，
+        '因此必须用 IsExited 作为退出条件，否则会永久挂起导致登录卡死
+        While Not Converter.IsExited
+            Thread.Sleep(50)
+        End While
+        If Converter.Result Is Nothing Then Return Nothing
+        Return Converter.Result.ToString()
     End Function
     '从用户粘贴的内容中提取 OAuth code，容忍只粘贴了 code 本身
     Private Function ExtractOAuthCode(Input As String) As String

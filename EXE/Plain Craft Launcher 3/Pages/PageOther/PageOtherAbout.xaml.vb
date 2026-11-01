@@ -88,7 +88,10 @@
             RunInThread(
             Sub()
                 Try
-                    Dim Url As String = "https://q1.qlogo.cn/g?b=qq&nk=1740443398&s=100"
+                    '改成你自己的 QQ 号，头像会在运行时自动拉取；留空则使用内置图片
+                    Dim QqNumber As String = "123456789"
+                    If QqNumber = "" Then Return
+                    Dim Url As String = $"https://q1.qlogo.cn/g?b=qq&nk={QqNumber}&s=100"
                     RunInUi(
                     Sub()
                         Try
