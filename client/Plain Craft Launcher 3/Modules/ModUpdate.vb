@@ -56,11 +56,17 @@ Public Module ModUpdate
         Public Notices As New List(Of UpdateNotice)
     End Class
 
+    ''' <summary>
+    ''' 主页最多显示的公告条数。
+    ''' </summary>
+    Public Const MaxNoticeCount As Integer = 5
+
     Public Class UpdateNotice
         Public Id As String = ""
         Public Title As String = ""
         Public Content As String = ""
         Public Priority As Integer
+        Public Time As Long
     End Class
 
     ''' <summary>
@@ -125,7 +131,8 @@ Public Module ModUpdate
                         .Id = If(Obj("id")?.ToString(), ""),
                         .Title = If(Obj("title")?.ToString(), ""),
                         .Content = If(Obj("content")?.ToString(), ""),
-                        .Priority = If(Obj("priority")?.ToObject(Of Integer)(), 0)
+                        .Priority = If(Obj("priority")?.ToObject(Of Integer)(), 0),
+                        .Time = If(Obj("time")?.ToObject(Of Long)(), 0L)
                     })
                 Next
             End If
@@ -182,7 +189,14 @@ Public Module ModUpdate
         Try
             Dim Result As UpdateCheckResult = CheckUpdate()
             If Result Is Nothing Then Return New List(Of UpdateNotice)
-            Return Result.Notices
+            Dim Raw As List(Of UpdateNotice) = If(Result.Notices, New List(Of UpdateNotice))
+            '本地再排一次序，防止服务端未排序或客户端解析顺序变化：
+            '优先级高的排前面，同优先级按时间倒序（新的在前）。
+            Dim Sorted = (From N In Raw
+                          Order By N.Priority Descending, N.Time Descending
+                          Take MaxNoticeCount).ToList()
+            Logger.Info($"公告：服务端返回 {Raw.Count} 条，排序后取前 {Sorted.Count} 条")
+            Return Sorted
         Catch ex As Exception
             Logger.Warn(ex, "拉取公告失败")
             Return New List(Of UpdateNotice)
