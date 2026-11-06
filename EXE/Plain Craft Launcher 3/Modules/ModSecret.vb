@@ -233,9 +233,6 @@ Friend Module ModSecret
     End Sub
 
     ''' <summary>
-    ''' 判断某个隐藏主题是否已解锁。
-    ''' </summary>
-    ''' <summary>
     ''' 蓝色系主题编号（色相 180~260）。发布版只允许这几个。
     ''' </summary>
     Public ReadOnly BlueThemes As New HashSet(Of Integer) From {0, 1, 11}

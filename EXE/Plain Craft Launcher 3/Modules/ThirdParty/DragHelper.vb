@@ -106,7 +106,6 @@ Public Class DragHelper
     Private Const WM_DROPFILES As UInteger = &H233
     Private Const MSGFLT_ALLOW As UInteger = 1
     Private Const MSGFLT_ADD As UInteger = 1
-    Private Const MAX_PATH As Integer = 260
 
     Private Shared Sub ChangeMessageFilter(handle As IntPtr)
         Dim ver As Version = Environment.OSVersion.Version
@@ -138,8 +137,12 @@ Public Class DragHelper
         ReDim dropFilePaths(CInt(fileCount) - 1)
 
         For i As UInteger = 0 To CInt(fileCount) - 1
-            Dim sb As New StringBuilder(MAX_PATH)
-            Dim result As UInteger = DragQueryFile(wParam, i, sb, sb.Capacity)
+            '修复 #9370：原来固定用 MAX_PATH(260) 作缓冲区，路径 >= 260 字符会被静默截断，
+            '导致提示「拖入的文件不存在」。改为先用 DragQueryFile 查询实际长度，再按需分配。
+            Dim pathLen As UInteger = DragQueryFile(wParam, i, Nothing, 0)
+            If pathLen = 0 Then Continue For
+            Dim sb As New StringBuilder(CInt(pathLen) + 1)
+            Dim result As UInteger = DragQueryFile(wParam, i, sb, CUInt(sb.Capacity))
             If result > 0 Then dropFilePaths(i) = sb.ToString()
         Next
 

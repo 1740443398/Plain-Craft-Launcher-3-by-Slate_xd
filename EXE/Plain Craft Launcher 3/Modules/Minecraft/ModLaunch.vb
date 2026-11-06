@@ -1510,7 +1510,12 @@ NextInstance:
         If McInstanceSelected.JsonObject("minecraftArguments")?.ToString.Any Then
             Dim BasicString As String = McInstanceSelected.JsonObject("minecraftArguments").ToString
             McLaunchLog($"旧版游戏参数：" & BasicString)
-            BasicString += " --height ${resolution_height} --width ${resolution_width}" '总是添加宽高选项，之后去重的时候会覆盖 MC 自带的
+            '修复 #9404：13w18a/13w18b 等极早期版本的 minecraftArguments 不含 --height/--width，
+            '无条件追加会让 joptsimple 抛 UnrecognizedOptionException 导致启动失败。
+            '改为仅在原参数里已存在该选项时才补（此时去重逻辑仍会正确覆盖 MC 自带值）。
+            If BasicString.Contains("--height") OrElse BasicString.Contains("--width") Then
+                BasicString += " --height ${resolution_height} --width ${resolution_width}"
+            End If
             Arg &= " " & BasicString
         End If
         '新版 MC：从版本 JSON 获取参数

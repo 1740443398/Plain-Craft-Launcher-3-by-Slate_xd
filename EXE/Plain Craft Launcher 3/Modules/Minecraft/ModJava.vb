@@ -460,6 +460,14 @@
                         Finally
                             JavaLoader.Cancel() '确保取消时中止 Java 下载
                         End Try
+                        '修复 #9026：下载完成后 JavaList 缓存可能尚未包含新装的 Java（扫描有延迟），
+                        '直接选择会得到 Nothing 并抛异常。这里先强制刷新一次列表再选。
+                        Logger.Info("Java 下载完成，刷新 Java 列表后重新选择")
+                        Try
+                            JavaListRefreshWorker.Start(c, p?.SplitTo(0.97))
+                        Catch ex As Exception
+                            Logger.Warn(ex, "下载完成后刷新 Java 列表失败，仍尝试从现有列表选择")
+                        End Try
                         Result = SelectJavaFromJavaList()
                         If Result IsNot Nothing Then p?.Finish() : Return Result
                         Throw New Exception($"下载 Java {JavaToDownload.ComponentName} 后仍然无法找到合适的 Java")

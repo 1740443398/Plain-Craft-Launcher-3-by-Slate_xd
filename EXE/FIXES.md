@@ -1,4 +1,4 @@
-# PCL3 修复清单
+﻿# PCL3 修复清单
 
 > 版本：3.00.0.1-beta (415)
 > 基线：Plain Craft Launcher 2.13.1.1
@@ -20,6 +20,10 @@
 | **#9001** | WebP 不兼容 AE2 Logo 动图 | ① 文件头判断原只看 `RI`（AVI/WAV 也是 RIFF），改为校验 `RIFF....WEBP`<br>② 动图解码失败时降级为 WPF 解首帧，不再整图变占位符 | `MyBitmap.vb:76` |
 | **#9343** | 主页替换标记玩家名/版本启动时不加载 | 实例与登录未就绪时**保留原标记**而非替换为空，避免永久空白 | `ModMain.vb:865` |
 | **#9188** | 清理 %temp% 后点「查看输出」崩溃 | `FileUtils.Write` 前确保目录存在，整段加 Try 兜底为复制剪贴板 | `ModCrash.vb:870` |
+| **#9404** | 无法启动 13w18a / 13w18b | 旧版 `minecraftArguments` 无条件追加 `--height/--width`，极早期版本不认该选项，抛 `UnrecognizedOptionException`。改为仅原参数已含此选项时才补 | `ModLaunch.vb:1513` |
+| **#9026** | 下载 jre-legacy 后仍找不到合适 Java | 下载完成后 JavaList 缓存可能未刷新，直接选择得到 Nothing 并抛异常。改为先强制刷新列表再选 | `ModJava.vb:463` |
+| **#9370** | 路径 ≥260 字符拖入被静默截断 | 固定 `StringBuilder(MAX_PATH)` 会截断长路径，导致提示「文件不存在」。改为先用 `DragQueryFile` 查实际长度再按需分配 | `DragHelper.vb:140` |
+| **#9003** | 批量更新模组替换失败会丢失旧模组 | 原逻辑先删光旧 Mod 再移新文件，移动失败就两头落空。改为先移入新文件（同名先备份为 `.pclbak`），成功后才删旧文件 | `PageInstanceMod.xaml.vb:595` |
 
 **额外修复（非上游 Issue，自查发现）**
 
@@ -92,7 +96,7 @@
 
 | 版本 | 大小 | SHA-256（前 16） | 状态 |
 |---|---|---|---|
-| 发布版 `AllowAllThemes = False` | 7.27 MB | `99085051A8488B39` | ✅ |
+| 发布版 `AllowAllThemes = False` | 7.27 MB | `22B3A1619A880AFB` | ✅ |
 | 自用版 `AllowAllThemes = True` | 7.26 MB | `1E7A2F69011DD855` | ✅ |
 
 自用版通过复制源码到临时目录构建，**主源码未被改动**，`AllowAllThemes` 保持 `False`。
