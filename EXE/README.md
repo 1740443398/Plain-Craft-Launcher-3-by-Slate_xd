@@ -61,75 +61,100 @@ VB.NET · .NET Framework 4.8 · 单文件打包
 ## 本版本改了什么
 
 相对于上游 **Plain Craft Launcher 2.13.1.1**，本版本做了以下修改。
-按「问题修复」「新增功能」「体验优化」三类整理。
+
+内容分四部分：
+
+1. **[关于「问题修复」的说明](#关于问题修复的说明)** —— 先说清哪些不是原版的锅
+2. **A. 补全开源版缺失的占位功能** —— 上游开源版没实现的部分
+3. **B. 本版本自身改造引入、已一并修正的问题** —— 自己改出来的，不是上游缺陷
+4. **C. 上游 Issue 跟踪表里的真实修复** —— 有 Issue 编号可查证的
 
 ---
 
-### 问题修复
+### 关于「问题修复」的说明
 
-<table>
-<tr><td width="50%" valign="top">
+**重要：本版本不声称修复了原版 PCL 的任何 Bug。**
 
-#### 1. 内存优化完全不可用
+上游开源仓库 `Meloong-Git/PCL` 中，`Modules/PageOther/PageOtherTest.xaml.vb` 的 8 个函数
+（`MemoryOptimize`、`Jrrp`、`RubbishClear`、`GetRandomCave`、`GetRandomHint` 等）
+全部是占位实现：
 
-**现象**：点击「内存优化」提示成功，但可用内存没有任何变化。
+```vb
+Public Shared Sub MemoryOptimize(ShowHint As Boolean)
+    If ShowHint Then Hint("为便于维护，开源内容中不包含百宝箱功能……")
+End Sub
+```
 
-**根因**：`PrivilegeToken` 结构体用 `Pack:=1` 布局，同时把 `Luid` 声明为 `Long`。
-这导致 LUID 落在偏移 4 而非 8，`AdjustTokenPrivileges` 返回 `LastError = 1300`
-（权限无效），后续 `NtSetSystemInformation` 返回 `0xC0000061`（权限不足）。
+也就是说，**正式发布的 PCL 里这些功能是真实可用的**，作者只是没把实现开源。
+本版本补全了这些缺失的实现 —— 这是「补功能」，不是「修 Bug」。
 
-**修复**：
-
-- 改用 `Pack:=4`，把 `Luid` 拆成 `LuidLowPart` / `LuidHighPart` 两个 `Integer`
-- `LookupPrivilegeValue` 改为接收 `IntPtr`，手工 `AllocHGlobal(16)` 布局
-- 改用 `OpenProcessToken` / `GetCurrentProcess` / `CloseHandle`，
-  避免 `WindowsIdentity` 的 `Using` 提前释放 token 句柄
-
-**验证**：独立测试程序中，操作码 2/3/4 均返回 0（成功）。
-
-</td><td width="50%" valign="top">
-
-#### 2. 部分主题无法点击
-
-**现象**：部分主题按钮点不动，另有按钮互相重叠。
-
-**根因**：XAML 里覆盖了 4 个 `TextBlock` 透明遮罩（`LabLauncherTheme5Unlock` 等），
-原本用于「未解锁时拦截点击」，但主题已全部开放，遮罩却没移除，鼠标事件全被吃掉。
-另外主题 `Grid` 只定义了 3 行，`RadioLauncherTheme15` 却用了 `Grid.Row="3"`，越界后被画在同一行。
-
-**修复**：删除 4 个遮罩与关联事件处理，补齐 `RowDefinition` / `ColumnDefinition`。
-
-#### 3. 回声洞动画顺序错误
-
-**现象**：留言先完整显示，然后才开始逐字打出。
-
-**根因**：`AaTextAppear` 在**构造时**捕获 `Obj.Text`，动画过程中逐字写回。
-如果先启动动画再改文本，捕获到的是旧文本，就会出现「先显示再打字」。
-
-**修复**：调整为先写入新文本 → 构造动画 → 启动 → 恢复旧文本。
-同时把闪烁效果从 2 步扩展到 11 步，过渡更自然。
-
-</td></tr>
-</table>
-
-#### 4. 公告从未显示
-
-**现象**：服务端发布了公告，客户端始终收不到。
-
-**根因**：`FetchNoticesForHome()` 写好了但**从未被任何地方调用**。
-`ModSync` 只把公告数量写进 `SyncState.NoticeCount`，没有渲染。
-
-**修复**：主页新增「公告」卡片，`LoadNotices()` 在页面加载时拉取并渲染。
-无公告时整张卡片隐藏，不占空间。
-
-#### 5. 界面按钮尺寸不统一
-
-**现象**：主页、设置页、登录页的按钮高矮不一（28 / 32 / 34 / 35 / 36 / 54 六种高度混用）。
-
-**修复**：给 `MyButton` 设默认 `Height="35"`，把 79 个未设高度的按钮和 9 个偏离值统一到 35。
-只有「正在加载」这类大按钮保留 54。
+下面按性质分三类说明。
 
 ---
+
+### A. 补全开源版缺失的占位功能
+
+这 5 个函数在上游开源版中是占位，本版本给出了真实实现。
+**它们的正确性以正式发布版 PCL 为参照，不构成对上游缺陷的指控。**
+
+| 功能 | 上游开源版 | 本版本实现 |
+|---|---|---|
+| 内存优化 | 占位，直接弹提示 | `Modules/ModWindows.vb`：调用 `NtSetSystemInformation` 真实释放工作集 |
+| 今日人品 | 占位 | `Pages/PageOther/PageOtherTest.xaml.vb` 中的 `Jrrp()`，含分档算法 |
+| 回声洞 | 占位 | `ModHitokoto.vb` + 内置 755 条留言 |
+| 一言 | 占位 | `ModHitokoto.vb`，四源轮询 + 磁盘缓存 |
+| 百宝箱其余项 | 占位 | 保持原样（见「已知限制」） |
+
+#### 内存优化的实现要点
+
+调用 `NtSetSystemInformation`（类 `SystemMemoryListInformation`，操作码 4）清空工作集。
+需要先启用 `SeProfileSingleProcessPrivilege`，实现时踩过两个坑，记录在此：
+
+- **`PrivilegeToken` 结构体布局**：`Luid` 必须落在偏移 8。用 `Pack:=1` + `Luid As Long`
+  会使其落在偏移 4，导致 `AdjustTokenPrivileges` 返回 `LastError = 1300`（权限无效）。
+  本版本用 `Pack:=4` 并把 `Luid` 拆成 `LuidLowPart` / `LuidHighPart` 两个 `Integer`。
+- **Token 句柄生命周期**：`WindowsIdentity.GetCurrent().Token` 在 `Using` 结束时会被释放，
+  后续调用拿到的句柄已失效。改为自行 `OpenProcessToken` + `CloseHandle`。
+
+> 这两条是**本版本自己实现时踩的坑**，不是上游代码的问题。
+
+---
+
+### B. 本版本自身改造引入、已一并修正的问题
+
+以下问题由本版本的改造动作引起，不是上游原有缺陷。列出仅为说明现状。
+
+| 问题 | 由来 | 处理 |
+|---|---|---|
+| 主题按钮点不动 / 重叠 | 发布版只保留蓝色系，隐藏其余按钮时原遮罩 `LabLauncherTheme5Unlock` 等残留，吃掉了鼠标事件；主题 Grid 只定义 3 行而新增按钮用了 `Grid.Row="3"` | 重建独立 4 列 Grid，不再复用原布局 |
+| 反馈流程卡死 | 本版本早期自行编写的 `MyMsgInputBox` 用 `Thread.Sleep(50)` 忙等，在 UI 线程上阻塞消息循环 | 改为委托 `MyMsgBoxInput`（`Dispatcher.PushFrame`）；反馈入口整体改为跳转网站 |
+| 公告不显示 | 本版本新增的 `FetchNoticesForHome()` 写好后漏了调用点 | 主页新增公告卡片，页面加载时拉取渲染 |
+| 回声洞动画顺序异常 | 本版本补写动画调用时，先启动动画再写入文本，导致先显示后打字 | 调整为先写文本 → 构造动画 → 启动 → 恢复 |
+| 界面按钮高矮不一 | 本版本新增入口时未统一高度（28/32/34/35/36/54 六种混用） | `MyButton` 默认 `Height="35"`，79 个未设高度的按钮统一 |
+
+---
+
+### C. 上游 Issue 跟踪表里的真实修复
+
+以下问题**确实来自 `Meloong-Git/PCL` 的公开 Issue**，本版本逐一排查并修复。
+每条都标注了 Issue 编号，可对照原帖核实。
+
+| Issue | 问题 | 修复 |
+|---|---|---|
+| [#9412](https://github.com/Meloong-Git/PCL/issues/9412) | CurseForge API 返回 `fileName`（小写开头），代码读 `FileName` 静默失效 | 两种写法都兼容 |
+| [#9374](https://github.com/Meloong-Git/PCL/issues/9374) | 导入整合包时可选文件弹窗只显示文件名 `[1.20.1] Forge 1.4.0` | 优先取项目名，失败回退文件名 |
+| [#9242](https://github.com/Meloong-Git/PCL/issues/9242) | 输入链接缺 `https://` 时报错 | 新增 `NormalizeUrl()` 自动补协议头 |
+| [#9277](https://github.com/Meloong-Git/PCL/issues/9277) | 自定义主页中文域名无法加载 | 同上函数，`IdnMapping.GetAscii()` 转 Punycode |
+| [#9360](https://github.com/Meloong-Git/PCL/issues/9360) | 多实例并发更新 Mod 时替换失败 | 临时目录由全局共用改为按实例哈希隔离 |
+| [#9001](https://github.com/Meloong-Git/PCL/issues/9001) | CurseForge 的 WebP 图标显示为占位图 | ① 文件头原只校验 `RI`，AVI/WAV 也是 RIFF；改为校验 `RIFF....WEBP` ② 动图解码失败时降级为 WPF 解首帧 |
+| [#9343](https://github.com/Meloong-Git/PCL/issues/9343) | 启动时主页 `{user}` / `{version}` 不加载 | 未就绪时保留标记原样，而非替换为空 |
+| [#9188](https://github.com/Meloong-Git/PCL/issues/9188) | 清理 `%temp%` 后点「查看输出」启动器崩溃 | 写文件前确保目录存在，失败时降级为复制到剪贴板 |
+| [#9404](https://github.com/Meloong-Git/PCL/issues/9404) | 13w18a / 13w18b 无法启动 | 旧版 `minecraftArguments` 无条件追加 `--height/--width`，极早期版本不认；改为仅在原参数已含该选项时补 |
+| [#9026](https://github.com/Meloong-Git/PCL/issues/9026) | 下载 jre-legacy 后仍报「找不到合适 Java」 | 下载完成后 Java 列表缓存未刷新，改为强制刷新后再选 |
+| [#9370](https://github.com/Meloong-Git/PCL/issues/9370) | 拖入路径 ≥260 字符的文件被静默截断 | 固定 `StringBuilder(MAX_PATH)` 会截断，改为先查实际长度再分配 |
+| [#9003](https://github.com/Meloong-Git/PCL/issues/9003) | 批量更新 Mod 替换失败时丢失旧文件 | 原逻辑先删旧再移新，移动失败即两头落空；改为先移入新文件（同名先备份 `.pclbak`），成功后才删旧 |
+
+> 上游共 1058 个 Issue（79 开放 / 979 已关闭）。其余未修的条目及原因见 [`FIXES.md`](./FIXES.md)。
 
 ### 新增功能
 
@@ -208,24 +233,23 @@ bmclapi（第一源） → 官方源 → ZCSM 镜像
 
 #### 6. 回声洞内置 755 条留言
 
-原版回声洞依赖服务端，服务端不可用时无内容可看。
-本版本内置 755 条留言，优先从服务端取，失败时回退到内置数据。
+上游开源版中 `GetRandomCave()` 是占位实现，**正式发布版 PCL 的回声洞数据来源未公开**，
+因此本版本无从对比，也未假设其实现方式。
+
+本版本的实现：内置 755 条留言随程序分发，运行时优先向自建服务端请求最新内容，
+请求失败或超时时静默回退到内置数据，保证离线可用。
 
 ### 体验优化
 
 #### 1. 今日人品算法调整
 
-**原算法**：把 `Raw`（0~1000 均匀分布）线性映射到 0~99 分。
+**关于「原算法」的说明**：上游开源版的 `Jrrp()` 是占位实现，
+**正式发布版的分档方式未公开**，本版本无法对比，也不声称其存在缺陷。
 
-实测分布：
+本节记录的 `Raw` 映射关系，是本版本**自行实现的初版**——当时采用最简单的线性映射，
+实测平均 51.1 分、58.2% 低于 60 分。因为体验不佳，遂改为分档映射。
 
-| 指标 | 原版 |
-|---|---|
-| 平均分 | 51.1 |
-| 低于 60 分占比 | 58.2% |
-| 低于 80 分占比 | 77.8% |
-
-近六成情况低于 60 分，容易影响心情。
+> 换言之：下面的「优化前」指**本版本自己的第一版**，不是原版 PCL。
 
 **新算法**：分档映射，高分占绝大多数，低分逐级递减但 **0 分仍可达**。
 

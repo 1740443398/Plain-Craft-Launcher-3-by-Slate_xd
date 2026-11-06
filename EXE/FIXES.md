@@ -6,6 +6,29 @@
 
 ---
 
+## 零、先厘清：什么不是原版的问题
+
+上游开源仓库 `Meloong-Git/PCL` 的 `Modules/PageOther/PageOtherTest.xaml.vb` 中，
+8 个函数是**占位实现**：
+
+```vb
+Public Shared Sub MemoryOptimize(ShowHint As Boolean)
+    If ShowHint Then Hint("为便于维护，开源内容中不包含百宝箱功能……")
+End Sub
+```
+
+涉及 `MemoryOptimize`、`MemoryOptimizeInternal`、`Jrrp`、`RubbishClear`、
+`GetRandomCave`、`GetRandomHint`、`GetRandomPresetHint`、`StartCustomDownload`。
+
+**正式发布的 PCL 中这些功能真实可用**，作者只是未开源实现。因此：
+
+- 本版本补全这些实现 = **补功能**，不是修 Bug
+- 本版本曾把「内存优化无效」「公告不显示」「反馈卡死」等写成「原版问题」，
+  其中后两者实为本版本自身改造引入，现已更正
+- 本文档只记录两类内容：**上游公开 Issue 的真实修复**，以及**本版本自身引入问题的修正**
+
+---
+
 ## 一、本轮新增修复（来源：Meloong-Git/PCL 真实 Issue）
 
 抓取上游全部 **1058 个 Issue**（79 开放 / 979 已关闭），筛选可代码层验证的条目逐条排查。
