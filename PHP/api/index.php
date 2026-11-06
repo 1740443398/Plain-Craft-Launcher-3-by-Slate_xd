@@ -13,19 +13,19 @@
 
 // ==================== 配置 ====================
 const ADMIN_PASSWORD_HASH = '$2y$12$3adkCrYrPCtNttjnkVA0zeXgCePY.SAECGglwQnB7VZARY/5gAKku';
-const CLIENT_API_KEY     = 'REPLACE_WITH_YOUR_CLIENT_API_KEY';
-const SESSION_SALT       = 'CHANGE_ME_SESSION_SALT_32_HEX';
+const CLIENT_API_KEY     = '650904d4c38c8f53ee1a96ea6eaa519eb18a3358e1fe3736ed59807c06103a4b';
+const SESSION_SALT       = '1f2d1ccdb5a39e187b346e2e58aa18bf';
 const SESSION_TTL        = 43200;      // 12 小时
-const IP_SALT            = 'CHANGE_ME_IP_SALT';
+const IP_SALT            = 'pcl3_ip_salt_9f3a2c';
 
 const DATA_DIR = __DIR__ . '/data';
 
 // SMTP 配置（QQ 邮箱）
 const SMTP_HOST   = 'ssl://smtp.qq.com';
 const SMTP_PORT   = 465;
-const SMTP_USER   = 'YOUR_EMAIL@example.com';
-const SMTP_PASS   = 'YOUR_QQ_SMTP_AUTH_CODE';
-const SMTP_FROM   = 'YOUR_EMAIL@example.com';
+const SMTP_USER   = '1740443398@qq.com';
+const SMTP_PASS   = 'mwydlrxfkkkqdejg';
+const SMTP_FROM   = '1740443398@qq.com';
 const SMTP_FROM_NAME = 'PCL3 反馈中心';
 const SMTP_ENABLED = true;
 
@@ -53,7 +53,6 @@ function siteBase() {
     $scheme = $https ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $dir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
-    // api/ 的上一级就是站点根
     if (substr($dir, -4) === '/api') $dir = substr($dir, 0, -4);
     return $scheme . '://' . $host . $dir;
 }
@@ -464,6 +463,11 @@ switch ($action) {
         $donors   = readJson('donors', []);
         $caves    = readJson('caves', []);
         $feedback = readJson('feedback', []);
+        $ideas    = readJson('ideas', []);
+        usort($ideas, function ($a, $b) {
+            $d = ($b['votes'] ?? 0) - ($a['votes'] ?? 0);
+            return $d !== 0 ? $d : (($b['time'] ?? 0) - ($a['time'] ?? 0));
+        });
         foreach ($donors as $i => $d) {
             $donors[$i]['amount'] = number_format(floatval($d['amount'] ?? 0), 2, '.', '');
         }
@@ -477,9 +481,11 @@ switch ($action) {
                 'releases' => count($releases), 'notices' => count($notices),
                 'donors' => count($donors), 'caves' => count($caves),
                 'feedback' => count($feedback), 'feedback_open' => $openCount,
+                'ideas' => count($ideas), 'votes_total' => array_sum(array_map(fn($i) => intval($i['votes'] ?? 0), $ideas)),
             ],
             'releases' => $releases, 'notices' => $notices,
             'donors' => $donors, 'caves' => $caves, 'feedback' => $feedback,
+            'ideas' => $ideas,
             'smtp_enabled' => SMTP_ENABLED,
             'smtp_host' => SMTP_HOST . ':' . SMTP_PORT,
         ]);
@@ -730,7 +736,22 @@ switch ($action) {
     // ---------- 公开统计（前台展示用） ----------
     // ---------- 新功能投票：跳转到站点投票页 ----------
     case 'vote_page':
-        header('Location: ' . siteBase() . '/vote/', true, 302);
+        // 投票已内嵌到首页，不再单独跳 /vote/
+        header('Location: ' . siteBase() . '/#vote', true, 302);
+        exit;
+
+    // ---------- 反馈页 / 查询页跳转（客户端引流用） ----------
+    case 'feedback_page':
+        header('Location: ' . siteBase() . '/#feedback', true, 302);
+        exit;
+
+    case 'track_page':
+        header('Location: ' . siteBase() . '/#track', true, 302);
+        exit;
+
+    // ---------- 回声洞投稿页跳转（客户端引流用） ----------
+    case 'cave_page':
+        header('Location: ' . siteBase() . '/#cave', true, 302);
         exit;
 
     // ---------- 新功能投票：列表（公开） ----------
@@ -779,6 +800,19 @@ switch ($action) {
         $list[] = $e;
         writeJson('ideas', $list);
         respond(['ok' => true, 'idea' => ['id' => $e['id']]]);
+        break;
+
+    // ---------- 新功能投票：删除（管理） ----------
+    case 'vote_delete':
+        requireAdmin();
+        $id = trim($_POST['id'] ?? $_GET['id'] ?? '');
+        if ($id === '') fail('缺少 id');
+        $list = readJson('ideas', []);
+        $before = count($list);
+        $list = array_values(array_filter($list, fn($x) => ($x['id'] ?? '') !== $id));
+        if (count($list) === $before) fail('未找到该想法', 404);
+        writeJson('ideas', $list);
+        respond(['ok' => true, 'removed' => 1, 'total' => count($list)]);
         break;
 
     // ---------- 新功能投票：投一票 ----------
@@ -965,11 +999,13 @@ switch ($action) {
             $active[] = $n;
         }
         usort($active, fn($a, $b) => (($b['priority'] ?? 0) - ($a['priority'] ?? 0)) ?: (($b['time'] ?? 0) - ($a['time'] ?? 0)));
+        // 只返回前 5 条（优先级高的在前，同优先级按时间倒序）
+        $active = array_slice($active, 0, 5);
         // 为最新版补上可直接下载的地址（服务器自存优先，外部 url 作为备用）
         if ($best !== null) {
             $dl = [];
             if (!empty($best['file'])) {
-                $dl[] = siteBase() . '/api/index.php?action=download&version=' . rawurlencode($best['version']);
+                $dl[] = 'https://pcl3.byethost9.com/api/index.php?action=download&version=' . rawurlencode($best['version']);
             }
             if (!empty($best['url'])) {
                 $dl[] = $best['url'];

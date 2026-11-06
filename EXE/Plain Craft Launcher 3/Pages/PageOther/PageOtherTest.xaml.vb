@@ -14,7 +14,6 @@
         AddHandler CardCave.PreviewMouseLeftButtonUp, AddressOf CardCave_Click
         AddHandler BtnClick.Click, AddressOf BtnClickHandler
         AddHandler LabCave.MouseLeftButtonUp, AddressOf CardCave_Click
-        AddHandler BtnCave.Click, Sub(sender As Object, e As EventArgs) SubmitCaveDialog()
         '恢复「开始下载」按钮的可用性联动：
         '原先这个逻辑保存在 BAML 里，反编译时丢失，导致按钮永远是禁用状态、点不了。
         AddHandler TextDownloadUrl.ValidateChanged, AddressOf DownloadInputChanged
@@ -441,21 +440,18 @@
     ''' <summary>
     ''' 弹出回声洞投稿对话框。
     ''' </summary>
+    ''' <summary>
+    ''' 回声洞投稿。与反馈一致，统一引导到网页端操作，不在客户端内弹窗。
+    ''' </summary>
     Public Shared Sub SubmitCaveDialog()
         Try
-            Dim Text As String = MyMsgInputBox("写下你想说的话（最多 200 字）", "回声洞投稿")
-            If String.IsNullOrWhiteSpace(Text) Then Return
-            If Text.Trim().Length > 200 Then
-                Hint("留言最多 200 字", HintType.Red)
-                Return
-            End If
-            Dim Author As String = MyMsgInputBox("署名（可留空）", "回声洞投稿")
-            ModBase.RunInThread(
-            Sub()
-                ModFeedback.SubmitCave(Text, If(Author, ""))
-            End Sub)
+            Dim Msg As String = "回声洞投稿已移至网页端。" & vbCrLf & vbCrLf &
+                              "在那里可以写更长的留言、附上署名，也能看到别人投的内容。" & vbCrLf & vbCrLf &
+                              "要现在打开吗？"
+            If MyMsgBox(Msg, "回声洞投稿", "去网站投稿", "取消") = 2 Then Return
+            ModBase.OpenWebsite($"{ModUpdate.ApiBase}?action=cave_page")
         Catch ex As Exception
-            Logger.Error(ex, "打开回声洞投稿失败")
+            Logger.Error(ex, "打开回声洞投稿页失败")
             Hint($"打开失败：{ex.Message}", HintType.Red)
         End Try
     End Sub
