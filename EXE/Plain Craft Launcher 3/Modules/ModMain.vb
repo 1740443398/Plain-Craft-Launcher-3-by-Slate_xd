@@ -862,14 +862,9 @@ NextFile:
             Text = Text.Replace("{neoforge}", Replacer(If(McInstanceSelected.Version.HasNeoForge, McInstanceSelected.Version.NeoForge, "")))
             Text = Text.Replace("{liteloader}", Replacer(If(McInstanceSelected.Version.HasLiteLoader, "true", "")))
         Else
-            Text = Text.Replace("{version_path}", Replacer(Nothing)) : Text = Text.Replace("{verpath}", Replacer(Nothing))
-            Text = Text.Replace("{version_indie}", Replacer(Nothing)) : Text = Text.Replace("{verindie}", Replacer(Nothing))
-            Text = Text.Replace("{name}", Replacer(Nothing))
-            Text = Text.Replace("{version}", Replacer(Nothing))
-            Text = Text.Replace("{forge}", Replacer(Nothing))
-            Text = Text.Replace("{fabric}", Replacer(Nothing))
-            Text = Text.Replace("{neoforge}", Replacer(Nothing))
-            Text = Text.Replace("{liteloader}", Replacer(Nothing))
+            '修复 #9343：实例尚未加载完成时，若把标记替换成空串，之后不会重新渲染，主页就一直是空白。
+            '这里保留原标记，等实例加载完成后再次调用 ArgumentReplace 即可正确替换。
+            '（{version_path}/{verpath}/{version_indie}/{verindie}/{name}/{version}/{forge}/{fabric}/{neoforge}/{liteloader} 全部保留）
         End If
         '登录信息
         If McLoginLoader.State = LoadState.Finished Then
@@ -886,9 +881,8 @@ NextFile:
                     Text = Text.Replace("{login}", Replacer("Authlib-Injector"))
             End Select
         Else
-            Text = Text.Replace("{user}", Replacer(Nothing))
-            Text = Text.Replace("{uuid}", Replacer(Nothing))
-            Text = Text.Replace("{login}", Replacer(Nothing))
+        '修复 #9343：登录尚未完成时保留标记，避免主页显示为空且不再刷新
+        '（{user}/{uuid}/{login} 保留）
         End If
         '高级
         Text = Text.RegexReplace("\{hint\}", Function() Replacer(PageOtherTest.GetRandomHint()))

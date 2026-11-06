@@ -17,7 +17,7 @@ Public Module ModBase
     ''' True  = 自用版（不受分发限制，保留全部配色）
     ''' 修改此处后重新编译即可切换。
     ''' </summary>
-    Public Const AllowAllThemes As Boolean = True
+    Public Const AllowAllThemes As Boolean = False
 #If RELEASE Then
     Public Const VersionCode As Integer = 415 '内测版
 #Else
@@ -998,11 +998,9 @@ Public Module ModBase
     ''' </summary>
     Public Sub OpenWebsite(Url As String)
         Try
-            If Not Url.StartsWithF("http", True) AndAlso Not Url.StartsWithF("minecraft://", True) AndAlso Not Url.StartsWithF("minecraft-preview://", True) Then
-                Throw New Exception(Url & " 不是一个有效的网址，它必须以 http 开头！")
-            End If
-            Logger.Info($"正在打开网页：{Url}")
-            StartProcess(Url)
+            Dim Target As String = NormalizeUrl(Url)
+            Logger.Info($"正在打开网页：{Target}")
+            StartProcess(Target)
         Catch ex As Exception
             Logger.Warn(ex, $"无法打开网页（{Url}）")
             ClipboardSet(Url, False)
@@ -1010,6 +1008,46 @@ Public Module ModBase
                      $"网址：{Url}", "无法打开网页")
         End Try
     End Sub
+
+    ''' <summary>
+    ''' 把用户输入的网址规范化：自动补协议头、中文域名转 Punycode。
+    ''' 修复 #9242（缺协议头）与 #9277（中文域名无法访问）。
+    ''' </summary>
+    Public Function NormalizeUrl(Url As String) As String
+        If String.IsNullOrWhiteSpace(Url) Then Throw New Exception("网址为空")
+        Dim S As String = Url.Trim()
+
+        '1. 补协议头：只认 http/https/minecraft 等已知 scheme，其余一律当作域名处理
+        Dim HasScheme As Boolean =
+            S.StartsWithF("http://", True) OrElse S.StartsWithF("https://", True) OrElse
+            S.StartsWithF("minecraft://", True) OrElse S.StartsWithF("minecraft-preview://", True) OrElse
+            S.StartsWithF("ftp://", True) OrElse S.StartsWithF("file://", True) OrElse
+            S.StartsWithF("mailto:", True) OrElse S.StartsWithF("steam://", True)
+        If Not HasScheme Then
+            '用户漏写协议头（如 example.com/path），默认补 https
+            '若形如 "localhost:8080" 或纯 IP:端口，同样补 https
+            S = "https://" & S.TrimStart("/"c)
+        End If
+
+        '2. 中文域名转 Punycode（IDN），否则底层 HTTP 会解析失败
+        Try
+            Dim U As New Uri(S)
+            Dim Host As String = U.Host
+            '含非 ASCII 字符才需要转换
+            If Host.Any(Function(C) AscW(C) > 127) Then
+                Dim Idn As New System.Globalization.IdnMapping()
+                Dim AsciiHost As String = Idn.GetAscii(Host)
+                Dim Builder As New UriBuilder(U) With {.Host = AsciiHost}
+                S = Builder.Uri.AbsoluteUri
+                Logger.Info($"中文域名已转换为 Punycode：{Host} → {AsciiHost}")
+            End If
+        Catch ex As UriFormatException
+            'Uri 解析失败时保留原样，让 StartProcess 报出更明确的错误
+            Logger.Warn(ex, $"网址解析失败，按原样打开：{S}")
+        End Try
+
+        Return S
+    End Function
     ''' <summary>
     ''' 打开 explorer。
     ''' 若不以 \ 结尾，则将视作文件路径，打开并选中此文件。

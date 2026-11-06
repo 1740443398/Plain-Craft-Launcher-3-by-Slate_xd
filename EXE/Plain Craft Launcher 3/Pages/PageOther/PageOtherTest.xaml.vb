@@ -229,68 +229,75 @@
             Logger.Error(ex, "开始自定义下载失败", LogBehavior.AlertThenFeedback)
         End Try
     End Sub
+    Private Shared JrrpFlag As Integer = 0
     Public Shared Sub Jrrp()
-        Dim SeedA As ULong = ("asdfgbn" & Date.Now.DayOfYear.ToString() & "12#3$45" & Date.Now.Year.ToString() & "IUY").GetStableHashCode()
-        Dim SeedB As ULong = ("QWERTY" & ModBase.Identify & "0*8&6" & Date.Now.Day.ToString() & "kjhg").GetStableHashCode()
-        Dim Raw As Integer = CInt(Math.Round(Math.Abs((CDbl(SeedA) / 3.0 + CDbl(SeedB) / 3.0) / 527.0) Mod 1001.0))
-        'PCL3 调整：原版把 Raw(0~1000) 均匀映射到 0~99，平均只有 51 分，
-        '近六成情况低于 60 分，容易影响心情。
-        '改为分档映射：绝大多数落在 80 分以上，分数越低越罕见，但 0 分仍然可达。
-        '  80~100 分：约 92%（其中 100 分约 1.2%）
-        '  60~ 79 分：约  5%
-        '  30~ 59 分：约  2%
-        '  10~ 29 分：约 0.7%
-        '   0~  9 分：约 0.4%
-        Dim Score As Integer
-        If Raw <= 919 Then
-            '92%：80~100，平方曲线让高分更稀有
-            Dim T As Double = CDbl(Raw) / 919.0
-            Score = 80 + CInt(Math.Round(20.0 * T * T))
-        ElseIf Raw <= 969 Then
-            '5%：60~79
-            Score = 60 + CInt(Math.Round(19.0 * (Raw - 920) / 49.0))
-        ElseIf Raw <= 989 Then
-            '2%：30~59
-            Score = 30 + CInt(Math.Round(29.0 * (Raw - 970) / 19.0))
-        ElseIf Raw <= 996 Then
-            '0.7%：10~29
-            Score = 10 + CInt(Math.Round(19.0 * (Raw - 990) / 6.0))
-        Else
-            '0.4%：0~9
-            Score = CInt(Math.Round(9.0 * (Raw - 997) / 3.0))
-        End If
-        Dim Tail As String
-        If Score = 100 Then
-            Tail = "！100！100！！！！！" & If(ModSecret.ThemeUnlock(13, ShowDoubleHint:=False), vbCrLf & "隐藏主题 欧皇彩 已解锁！", "")
-        ElseIf Score >= 98 Then
-            Tail = "！差点就到 100 了呢……"
-        ElseIf Score >= 90 Then
-            Tail = "！好评如潮！"
-        ElseIf Score >= 65 Then
-            Tail = "！今天运气不错呢！"
-        ElseIf Score > 50 Then
-            Tail = "！还行啦，还行啦。"
-        ElseIf Score = 50 Then
-            Tail = "！五五开……"
-        ElseIf Score >= 40 Then
-            Tail = "！勉强还行吧……？"
-        ElseIf Score >= 20 Then
-            Tail = "！呜……"
-        ElseIf Score >= 11 Then
-            Tail = "？！不会吧……"
-        ElseIf Score >= 1 Then
-            Tail = "……（是百分制哦）"
-        Else
-            Tail = "？！"
-            If ModMain.MyMsgBox("在查看结果前，请先同意以下附加使用条款：" & vbCrLf & vbCrLf &
-                                "1. 我知晓并了解 PCL 的今日人品功能完全没有出 Bug。" & vbCrLf &
-                                "2. PCL 不对使用本软件所间接造成的一切财产损失（如砸电脑等）等负责。",
-                                "今日人品 - 附加使用条款", "同意并查看结果", "再见", "", IsWarn:=True) = 2 Then Return
-        End If
-        Dim Prefix As String = If(ModMain.FrmMain.IsSystemTimeChanged, "在这个时候，你的人品值会是：", "你今天的人品值是：")
-        Dim Title As String = If(ModMain.FrmMain.IsSystemTimeChanged, "今日人品? - ", "今日人品 - ") & Date.Now.ToString("yyyy/M/d")
-        ModMain.MyMsgBox(Prefix & Score.ToString() & Tail, Title, "我知道了", "", "", Score < 20)
-    End Sub
+        '防止弹窗期间重复触发（点「我知道了」的落点若命中主页人品卡片会再弹一次）
+        If Threading.Interlocked.Exchange(JrrpFlag, 1) <> 0 Then Return
+        Try
+            Dim SeedA As ULong = ("asdfgbn" & Date.Now.DayOfYear.ToString() & "12#3$45" & Date.Now.Year.ToString() & "IUY").GetStableHashCode()
+            Dim SeedB As ULong = ("QWERTY" & ModBase.Identify & "0*8&6" & Date.Now.Day.ToString() & "kjhg").GetStableHashCode()
+            Dim Raw As Integer = CInt(Math.Round(Math.Abs((CDbl(SeedA) / 3.0 + CDbl(SeedB) / 3.0) / 527.0) Mod 1001.0))
+            'PCL3 调整：原版把 Raw(0~1000) 均匀映射到 0~99，平均只有 51 分，
+            '近六成情况低于 60 分，容易影响心情。
+            '改为分档映射：绝大多数落在 80 分以上，分数越低越罕见，但 0 分仍然可达。
+            '  80~100 分：约 92%（其中 100 分约 1.2%）
+            '  60~ 79 分：约  5%
+            '  30~ 59 分：约  2%
+            '  10~ 29 分：约 0.7%
+            '   0~  9 分：约 0.4%
+            Dim Score As Integer
+            If Raw <= 919 Then
+                '92%：80~100，平方曲线让高分更稀有
+                Dim T As Double = CDbl(Raw) / 919.0
+                Score = 80 + CInt(Math.Round(20.0 * T * T))
+            ElseIf Raw <= 969 Then
+                '5%：60~79
+                Score = 60 + CInt(Math.Round(19.0 * (Raw - 920) / 49.0))
+            ElseIf Raw <= 989 Then
+                '2%：30~59
+                Score = 30 + CInt(Math.Round(29.0 * (Raw - 970) / 19.0))
+            ElseIf Raw <= 996 Then
+                '0.7%：10~29
+                Score = 10 + CInt(Math.Round(19.0 * (Raw - 990) / 6.0))
+            Else
+                '0.4%：0~9
+                Score = CInt(Math.Round(9.0 * (Raw - 997) / 3.0))
+            End If
+            Dim Tail As String
+            If Score = 100 Then
+                Tail = "！100！100！！！！！" & If(ModSecret.ThemeUnlock(13, ShowDoubleHint:=False), vbCrLf & "隐藏主题 欧皇彩 已解锁！", "")
+            ElseIf Score >= 98 Then
+                Tail = "！差点就到 100 了呢……"
+            ElseIf Score >= 90 Then
+                Tail = "！好评如潮！"
+            ElseIf Score >= 65 Then
+                Tail = "！今天运气不错呢！"
+            ElseIf Score > 50 Then
+                Tail = "！还行啦，还行啦。"
+            ElseIf Score = 50 Then
+                Tail = "！五五开……"
+            ElseIf Score >= 40 Then
+                Tail = "！勉强还行吧……？"
+            ElseIf Score >= 20 Then
+                Tail = "！呜……"
+            ElseIf Score >= 11 Then
+                Tail = "？！不会吧……"
+            ElseIf Score >= 1 Then
+                Tail = "……（是百分制哦）"
+            Else
+                Tail = "？！"
+                If ModMain.MyMsgBox("在查看结果前，请先同意以下附加使用条款：" & vbCrLf & vbCrLf &
+                                    "1. 我知晓并了解 PCL 的今日人品功能完全没有出 Bug。" & vbCrLf &
+                                    "2. PCL 不对使用本软件所间接造成的一切财产损失（如砸电脑等）等负责。",
+                                    "今日人品 - 附加使用条款", "同意并查看结果", "再见", "", IsWarn:=True) = 2 Then Return
+            End If
+            Dim Prefix As String = If(ModMain.FrmMain.IsSystemTimeChanged, "在这个时候，你的人品值会是：", "你今天的人品值是：")
+            Dim Title As String = If(ModMain.FrmMain.IsSystemTimeChanged, "今日人品? - ", "今日人品 - ") & Date.Now.ToString("yyyy/M/d")
+            ModMain.MyMsgBox(Prefix & Score.ToString() & Tail, Title, "我知道了", "", "", Score < 20)
+        Finally
+            Threading.Interlocked.Exchange(JrrpFlag, 0)
+        End Try
+        End Sub
 
     Private Shared MemoryOptimizeFlag As Integer = 0
 

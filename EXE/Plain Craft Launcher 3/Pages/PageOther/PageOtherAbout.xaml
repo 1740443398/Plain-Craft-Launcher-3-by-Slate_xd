@@ -34,7 +34,7 @@
                         </Image.Clip>
                     </Image>
                     <local:MyImage x:Name="ImgXiaoDi" Source="/Plain Craft Launcher 3;component/Images/Heads/XiaoDi.jpg" Grid.Row="1" Margin="3"
-                                   ToolTip="头像在运行时从网络自动更新">
+                                   ToolTip="头像来自 QQ 1740443398，运行时自动更新">
                         <Image.Clip>
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
                         </Image.Clip>
@@ -53,6 +53,7 @@
             <local:MyCard Margin="0,0,0,15" Title="特别鸣谢">
                 <Grid Margin="21,40,21,16">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="45" />
                         <RowDefinition Height="45" />
                         <RowDefinition Height="45" />
                         <RowDefinition Height="45" />
@@ -86,6 +87,13 @@
                     <local:MyListItem Title="Minecraft 中文论坛" Margin="-5,0,15,0" IsHitTestVisible="False" Info="虽然已经关站了，但感谢此前提供了 MCBBS 镜像源……" Grid.Row="8" Grid.Column="1" />
                     <local:MyListItem Title="PCL 内群的各位" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="感谢内群的沙雕网友们这么久以来对我和 PCL 的支持与鼓励！" Grid.Row="9" Grid.Column="1" />
                     <local:MyListItem Title="SCL 内群的各位" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="感谢 SCL 内群的各位对 Plain Craft Launcher 3 的支持与帮助！" Grid.Row="10" Grid.Column="1" />
+                    <local:MyListItem Title="零核智能转储镜像" Margin="-5,0,15,0" IsHitTestVisible="False" Info="ZCSM（ZeroCore Smart Mirror）由等离子工作室维护，为 NeoForge、Forge、Fabric、Quilt 等模组加载器提供镜像加速！" Grid.Row="11" Grid.Column="1" />
+                    <local:MyButton Text="打开镜像站" Grid.Row="11" Grid.Column="2" Height="35" local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://mirror.zcswo.cn/" />
+                    <Image Source="/Plain Craft Launcher 3;component/Images/Heads/ZCSM.png" Grid.Row="11" Margin="3">
+                        <Image.Clip>
+                            <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
+                        </Image.Clip>
+                    </Image>
                     <Image Source="/Plain Craft Launcher 3;component/Images/Heads/bangbang93.png" Grid.Row="0" Margin="3">
                         <Image.Clip>
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />

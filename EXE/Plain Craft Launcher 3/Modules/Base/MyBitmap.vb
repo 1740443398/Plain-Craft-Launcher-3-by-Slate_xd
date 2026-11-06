@@ -73,15 +73,36 @@ Public Class MyBitmap
             Else
                 '使用这种自己接管 FileStream 的方法加载才能解除文件占用
                 Using InputStream = FileUtils.ReadAsStream(FilePathOrResourceName)
-                    '判断是否为 WebP 文件头
-                    Dim Header(1) As Byte
-                    InputStream.Read(Header, 0, 2)
-                    InputStream.Seek(0, SeekOrigin.Begin)
-                    If Header(0) = 82 AndAlso Header(1) = 73 Then
+                    '修复 #9001：原先只检查前两字节是否为 RI（RIFF 头），但 AVI/WAV 也是 RIFF，会误判为 WebP；
+                    '且没有校验第 8-11 字节的 "WEBP" 标识。改为完整校验 RIFF....WEBP 格式。
+                    Dim IsWebP As Boolean = False
+                    If InputStream.Length >= 12 Then
+                        Dim Head(11) As Byte
+                        InputStream.Read(Head, 0, 12)
+                        InputStream.Seek(0, SeekOrigin.Begin)
+                        IsWebP = Head(0) = 82 AndAlso Head(1) = 73 AndAlso Head(2) = 70 AndAlso Head(3) = 70 AndAlso 'RIFF
+                                 Head(8) = 87 AndAlso Head(9) = 69 AndAlso Head(10) = 66 AndAlso Head(11) = 80 'WEBP
+                    End If
+                    If IsWebP Then
                         '读取 WebP
                         Dim FileBytes(InputStream.Length - 1) As Byte
                         InputStream.Read(FileBytes, 0, FileBytes.Length)
-                        Pic = WebPDecoder.DecodeFromBytes(FileBytes) '将代码隔离在另外一个类中，这样只要不走进这个分支就不会加载 Imazen.WebP.dll
+                        Try
+                            Pic = WebPDecoder.DecodeFromBytes(FileBytes) '将代码隔离在另外一个类中，这样只要不走进这个分支就不会加载 Imazen.WebP.dll
+                        Catch ex As Exception
+                            '动图 WebP（如 AE2 Logo）或 SimpleDecoder 不支持的特性：
+                            '退化为用 WPF 解码第一帧，避免整个图标加载失败变成占位图（#9001）
+                            Try
+                                Using MS As New MemoryStream(FileBytes)
+                                    Dim Decoder As BitmapDecoder = BitmapDecoder.Create(MS, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad)
+                                    Pic = New MyBitmap(Decoder.Frames(0))
+                                End Using
+                                Logger.Info("WebP 动图或不支持的变体，已回退为静态首帧")
+                            Catch ex2 As Exception
+                                Logger.Warn(ex2, "WebP 解码失败，使用占位图")
+                                Pic = New System.Drawing.Bitmap(1, 1)
+                            End Try
+                        End Try
                     Else
                         Pic = New System.Drawing.Bitmap(InputStream)
                     End If

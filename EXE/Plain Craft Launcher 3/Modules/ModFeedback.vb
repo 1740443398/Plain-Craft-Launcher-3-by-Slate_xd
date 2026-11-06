@@ -1,5 +1,5 @@
 ﻿'PCL3 反馈与回声洞投稿
-'全部走可自行部署的服务端，不依赖 GitHub 或官方接口。
+'全部走自建服务端（pcl3.byethost9.com），不依赖 GitHub 或官方接口。
 Public Module ModFeedback
 
     ''' <summary>

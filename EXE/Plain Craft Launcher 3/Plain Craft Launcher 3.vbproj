@@ -865,6 +865,7 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\Heads\bangbang93.png" />
+    <Resource Include="Images\Heads\ZCSM.png" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\Heads\wiki.png" />

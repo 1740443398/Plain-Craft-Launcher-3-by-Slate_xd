@@ -867,14 +867,24 @@ NextStack:
             Button2Action:=If(IsManualAnalyze OrElse DirectFile Is Nothing, Nothing,
             Sub()
                 '弹窗选择：查看输出
-                If FileUtils.Exists(DirectFile.Value.Key) Then
-                    StartProcess(DirectFile.Value.Key)
-                Else
-                    Dim FilePath As String = PathTemp & "Crash.txt"
-                    FileUtils.Write(FilePath, DirectFile.Value.Value.Join(vbCrLf))
-                    StartProcess(FilePath)
-                End If
-            End Sub))
+                '修复 #9188：用户清理 %temp% 后 PathTemp 目录可能不存在，FileUtils.Write 会抛异常导致启动器崩溃。
+                Try
+                    If FileUtils.Exists(DirectFile.Value.Key) Then
+                        StartProcess(DirectFile.Value.Key)
+                    Else
+                        Dim FilePath As String = PathTemp & "Crash.txt"
+                        '确保临时目录存在（%temp% 可能被清理工具删掉）
+                        DirectoryUtils.Create(PathUtils.RemoveLastPart(FilePath))
+                        FileUtils.Write(FilePath, DirectFile.Value.Value.Join(vbCrLf))
+                        If Not FileUtils.Exists(FilePath) Then Throw New Exception($"写入崩溃日志失败：{FilePath}")
+                        StartProcess(FilePath)
+                    End If
+                Catch ex As Exception
+                    Logger.Warn(ex, "查看输出失败，改为复制到剪贴板")
+                    ClipboardSet(DirectFile.Value.Value.Join(vbCrLf), False)
+                    MyMsgBox("无法打开输出文件，内容已复制到剪贴板。" & vbCrLf & vbCrLf & $"错误：{ex.Message}", "查看输出")
+                End Try
+                End Sub))
             Case 3
                 '弹窗选择：导出错误报告
                 Dim FileAddress As String = Nothing

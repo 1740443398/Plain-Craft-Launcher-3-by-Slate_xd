@@ -262,13 +262,47 @@ Public Module ModModpack
             ModDownloadLoaders.Add(New LoaderTask(Of JArray, List(Of NetFile))("构造 Mod 下载信息",
             Sub(Task As LoaderTask(Of JArray, List(Of NetFile)))
                 Dim FileList As New Dictionary(Of Integer, NetFile)
+                '修复 #9374：可选文件弹窗原先用 displayName（文件名，如「[1.20.1] Forge 1.4.0」），
+                '用户看不出是哪个 Mod。改为优先用项目名（如「Factory Blocks」），取不到再回退。
+                Dim OptionalProjectNames As New Dictionary(Of Integer, String)
+                If ModOptionalList.Count > 0 Then
+                    Try
+                        '收集可选文件的 projectID
+                        Dim OptProjectIds As New List(Of String)
+                        For Each ModJson In Task.Input
+                            Dim FileId As Integer = ModJson("id").ToObject(Of Integer)
+                            If Not ModOptionalList.Contains(FileId) Then Continue For
+                            Dim ProjId As JToken = ModJson?("projectId")
+                            If ProjId IsNot Nothing AndAlso Not OptProjectIds.Contains(ProjId.ToString) Then OptProjectIds.Add(ProjId.ToString)
+                        Next
+                        If OptProjectIds.Count > 0 Then
+                            Dim OptProjects = ResourceProject.FromProjectIds(OptProjectIds, ResourcePlatforms.CurseForge).ToList()
+                            For Each Proj In OptProjects
+                                Dim Pid As Integer
+                                If Integer.TryParse(Proj.Id, Pid) Then OptionalProjectNames(Pid) = Proj.TranslatedName
+                            Next
+                            Logger.Info($"已解析 {OptionalProjectNames.Count} 个可选文件的项目名")
+                        End If
+                    Catch ex As Exception
+                        Logger.Warn(ex, "解析可选文件项目名失败，将回退到文件名")
+                    End Try
+                End If
                 For Each ModJson In Task.Input
                     Dim Id As Integer = ModJson("id").ToObject(Of Integer)
                     '跳过重复的 Mod（疑似 CurseForge Bug）
                     If FileList.ContainsKey(Id) Then Continue For
                     '可选 Mod 提示
                     If ModOptionalList.Contains(Id) Then
-                        If MyMsgBox("是否要下载整合包中的可选文件 " & ModJson("displayName").ToString & "？", "下载可选文件", "是", "否") = 2 Then
+                        '优先显示项目名，取不到则用文件名
+                        Dim OptName As String = ModJson?("displayName")?.ToString
+                        Dim OptProjId As JToken = ModJson?("projectId")
+                        If OptProjId IsNot Nothing Then
+                            Dim Pid As Integer
+                            If Integer.TryParse(OptProjId.ToString, Pid) AndAlso OptionalProjectNames.ContainsKey(Pid) Then
+                                OptName = OptionalProjectNames(Pid)
+                            End If
+                        End If
+                        If MyMsgBox("是否要下载整合包中的可选文件 " & OptName & "？", "下载可选文件", "是", "否") = 2 Then
                             Continue For
                         End If
                     End If
@@ -276,8 +310,8 @@ Public Module ModModpack
                     Dim TargetFolder As String, Type As ResourceTypes
                     If ModJson("modules").Any Then 'modules 可能返回 null（#1006）
                         Dim ModuleNames = CType(ModJson("modules"), JArray).Select(Function(l) l("name").ToString).ToList
-                        If ModuleNames.Contains("META-INF") OrElse ModuleNames.Contains("mcmod.info") OrElse ModuleNames.Contains("fabric.mod.json") OrElse
-                            ModJson?("FileName")?.ToString.EndsWithF(".jar", True) Then
+                        'CurseForge API 返回的是 fileName（小写开头），不是 FileName（#9412）
+                        If ModuleNames.Contains("META-INF") OrElse ModuleNames.Contains("mcmod.info") OrElse ModuleNames.Contains("fabric.mod.json") OrElse ModJson?("fileName")?.ToString.EndsWithF(".jar", True) OrElse ModJson?("FileName")?.ToString.EndsWithF(".jar", True) Then
                             TargetFolder = "mods" : Type = ResourceTypes.Mod
                         ElseIf ModuleNames.Contains("pack.mcmeta") Then
                             TargetFolder = "resourcepacks" : Type = ResourceTypes.ResourcePack

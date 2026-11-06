@@ -723,15 +723,17 @@ Public Class FormMain
                 ShapeTitleLogo.Visibility = Visibility.Collapsed
                 LabTitleLogo.Visibility = Visibility.Collapsed
                 ImageTitleLogo.Visibility = Visibility.Collapsed
+                PanTitleBrand.Visibility = Visibility.Visible   'PCL3 品牌始终显示
                 If Not IsNothing(FrmSetupUI) Then 'TODO: 和 FrmSetupUI 解耦
                     FrmSetupUI.CheckLogoLeft.Visibility = Visibility.Visible
                     FrmSetupUI.PanLogoText.Visibility = Visibility.Collapsed
                     FrmSetupUI.PanLogoChange.Visibility = Visibility.Collapsed
                 End If
             Case 1 '默认
-                ShapeTitleLogo.Visibility = Visibility.Visible
+                ShapeTitleLogo.Visibility = Visibility.Collapsed
                 LabTitleLogo.Visibility = Visibility.Collapsed
                 ImageTitleLogo.Visibility = Visibility.Collapsed
+                PanTitleBrand.Visibility = Visibility.Visible
                 If Not IsNothing(FrmSetupUI) Then
                     FrmSetupUI.CheckLogoLeft.Visibility = Visibility.Collapsed
                     FrmSetupUI.PanLogoText.Visibility = Visibility.Collapsed
@@ -739,8 +741,9 @@ Public Class FormMain
                 End If
             Case 2 '文本
                 ShapeTitleLogo.Visibility = Visibility.Collapsed
-                LabTitleLogo.Visibility = Visibility.Visible
+                LabTitleLogo.Visibility = Visibility.Collapsed
                 ImageTitleLogo.Visibility = Visibility.Collapsed
+                PanTitleBrand.Visibility = Visibility.Visible
                 If Not IsNothing(FrmSetupUI) Then
                     FrmSetupUI.CheckLogoLeft.Visibility = Visibility.Collapsed
                     FrmSetupUI.PanLogoText.Visibility = Visibility.Visible
@@ -749,7 +752,8 @@ Public Class FormMain
             Case 3 '图片
                 ShapeTitleLogo.Visibility = Visibility.Collapsed
                 LabTitleLogo.Visibility = Visibility.Collapsed
-                ImageTitleLogo.Visibility = Visibility.Visible
+                ImageTitleLogo.Visibility = Visibility.Collapsed
+                PanTitleBrand.Visibility = Visibility.Visible
                 If Not IsNothing(FrmSetupUI) Then
                     FrmSetupUI.CheckLogoLeft.Visibility = Visibility.Collapsed
                     FrmSetupUI.PanLogoText.Visibility = Visibility.Collapsed

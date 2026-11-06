@@ -577,7 +577,11 @@ Install:
                     NewestReplaceName = NewestSegs.Join("-")
                 End If
                 '添加到下载列表
-                Dim TempAddress As String = PathTemp & "mods\" & Entry.File.Name.Replace(CurrentReplaceName, NewestReplaceName) '需要下载到 mods 文件夹，以便重复文件检查时识别
+                '修复 #9360：临时目录原先全局共用 PathTemp\mods\，两个实例同时更新同名 Mod 时会互相覆盖，
+                '导致 FileUtils.Move 找不到源文件而失败。改为按实例隔离，并在文件名前加随机前缀彻底避免重名。
+                Dim TempModDir As String = $"{PathTemp}mods\{PageInstanceLeft.Instance.Name.GetStableHashCode()}\"
+                DirectoryUtils.Create(TempModDir)
+                Dim TempAddress As String = TempModDir & Entry.File.Name.Replace(CurrentReplaceName, NewestReplaceName)
                 Dim RealAddress As String = Path.Combine(PathUtils.RemoveLastPart(Entry.File.FullName), Entry.File.Name.Replace(CurrentReplaceName, NewestReplaceName))
                 FileList.Add(File.ToNetFile(TempAddress, ResourceVersion.DownloadReason.Update, PageInstanceLeft.Instance.Version.VanillaName, PageInstanceLeft.Instance.Version.ModLoaders))
                 FileCopyList(TempAddress) = RealAddress

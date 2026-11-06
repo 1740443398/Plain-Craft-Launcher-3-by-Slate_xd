@@ -15,7 +15,7 @@ Public Module ModByethost
     ''' 软件端 API Key。服务端用它区分「PCL3 客户端」与「浏览器」，
     ''' 浏览器直接访问接口会得到 403。
     ''' </summary>
-    Public Const ClientApiKey As String = "REPLACE_WITH_YOUR_CLIENT_API_KEY"
+    Public Const ClientApiKey As String = "650904d4c38c8f53ee1a96ea6eaa519eb18a3358e1fe3736ed59807c06103a4b"
 
 
     ''' <summary>

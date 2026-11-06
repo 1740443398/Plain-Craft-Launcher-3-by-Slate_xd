@@ -131,15 +131,22 @@
         e.Handled = True
     End Sub
     Public Shared Sub TryFeedback()
-        'PCL3 定制：反馈改为提交到自建服务端，不再依赖官方更新检查
-        '也不再要求「必须是最新版」，避免因更新源不可用而完全无法反馈
-        Select Case MyMsgBox("请选择要进行的操作。" & vbCrLf &
-                             "提交的反馈会直接送到 PCL3 维护者手中。",
-                             "反馈", "提交新反馈", "查看我的反馈", "取消")
+        'PCL3 定制：反馈统一引流到网站，客户端不再内嵌提交流程。
+        '原因：网站表单支持分类、字数统计、编号查询与邮件通知，体验更完整；
+        '同时避免在 UI 线程弹多级对话框（曾因 MyMsgInputBox 忙等导致卡死）。
+        Dim Choice As Integer = MyMsgBox(
+            "反馈与建议都在 PCL3 官方网站上进行。" & vbCrLf & vbCrLf &
+            "在网站上你可以：" & vbCrLf &
+            "  · 提交问题与建议，自动附带日志" & vbCrLf &
+            "  · 凭编号随时查询处理进度" & vbCrLf &
+            "  · 留下 QQ 号，状态变化时收到邮件通知",
+            "反馈", "去网站反馈", "查询进度", "取消")
+
+        Select Case Choice
             Case 1
-                ModFeedback.ShowSubmitDialog()
+                OpenWebsite($"{ModUpdate.ApiBase}?action=feedback_page")
             Case 2
-                ModFeedback.ShowMyFeedback()
+                OpenWebsite($"{ModUpdate.ApiBase}?action=track_page")
         End Select
     End Sub
     Private Sub TryVote(sender As Object, e As RouteEventArgs) Handles ItemVote.Changed
