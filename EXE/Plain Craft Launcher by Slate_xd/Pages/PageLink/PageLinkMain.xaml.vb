@@ -99,6 +99,16 @@ Public Class PageLinkMain
 
     '创建
     Private Sub Create_MouseLeftButtonUp() Handles PanSelectCreate.MouseLeftButtonUp
+        '优先走 Terracotta：它会自动扫描本机 Minecraft 端口，不需要玩家手动填
+        If FileUtils.Exists(TerracottaExe) Then
+            If TryStartHostWithTerracotta() Then
+                IsServerSide = True
+                ChangeState(LinkStates.Loading)
+                StartTerracottaPolling()
+                Return
+            End If
+        End If
+        '回退：原有 EasyTier 实现，需要玩家手填端口
         '输入端口号
         Dim Port As String = MyMsgBoxInput("输入端口", $"在单人游戏的暂停菜单选择 {vbLQ}对局域网开放{vbRQ}，然后输入端口数字。{vbCrLf}甚至可以输入其他游戏的端口……嗯……",
             ValidateRules:=New Collection(Of Validate) From {New ValidateInteger(1024, 65535)},
@@ -137,6 +147,16 @@ Public Class PageLinkMain
     End Sub
     Public Sub JoinInternal(Code As String)
         If Code Is Nothing Then Return
+        '优先走 Terracotta（邀请码格式 U/XXXX-XXXX-XXXX-XXXX）
+        If FileUtils.Exists(TerracottaExe) AndAlso Code.TrimStart().StartsWith("U/", StringComparison.OrdinalIgnoreCase) Then
+            If TryJoinWithTerracotta(Code.Trim()) Then
+                IsServerSide = False
+                ChangeState(LinkStates.Loading)
+                StartTerracottaPolling()
+                Return
+            End If
+        End If
+        '回退：原有 EasyTier 实现
         '基础格式校验
         Dim ValidateResult = ValidateCodeFormat(Code)
         If ValidateResult IsNot Nothing Then
@@ -1181,5 +1201,139 @@ ForcedPass:
         e.Handled = True
         StartNatCheck()
     End Sub
+
+
+    '===============================
+    '  Terracotta 集成（新路径）
+    '===============================
+    ' 通过 Terracotta 的本地 HTTP API 驱动联机，替代手写 EasyTier 命令行。
+    ' 旧路径保留作为回退：Terracotta 不可用时仍可用原有实现。
+
+    ''' <summary>Terracotta 是否已接管本次联机。</summary>
+    Private Shared UsingTerracotta As Boolean = False
+
+    ''' <summary>Terracotta 的可执行文件路径（%AppData%\PCL\Terracotta\terracotta.exe）。</summary>
+    Private Shared ReadOnly Property TerracottaExe As String
+        Get
+            Return Paths.AppDataThenName & "Terracotta\terracotta.exe"
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' 尝试用 Terracotta 开房。返回 True 表示已接管，调用方不应再走旧路径。
+    ''' </summary>
+    Private Shared Function TryStartHostWithTerracotta() As Boolean
+        Try
+            If Not ModTerracotta.Start(TerracottaExe) Then Return False
+            If Not ModTerracotta.StartHost() Then
+                ModTerracotta.Stop()
+                Return False
+            End If
+            UsingTerracotta = True
+            Logger.Info("已改用 Terracotta 开房")
+            Return True
+        Catch ex As Exception
+            Logger.Warn(ex, "Terracotta 开房失败，回退到原有实现")
+            Return False
+        End Try
+    End Function
+
+    ''' <summary>
+    ''' 尝试用 Terracotta 加入房间。返回 True 表示已接管。
+    ''' </summary>
+    Private Shared Function TryJoinWithTerracotta(Code As String) As Boolean
+        Try
+            If Not ModTerracotta.Start(TerracottaExe) Then Return False
+            If Not ModTerracotta.JoinRoom(Code) Then
+                ModTerracotta.Stop()
+                Return False
+            End If
+            UsingTerracotta = True
+            Logger.Info($"已改用 Terracotta 加入房间：{Code}")
+            Return True
+        Catch ex As Exception
+            Logger.Warn(ex, "Terracotta 加入房间失败，回退到原有实现")
+            Return False
+        End Try
+    End Function
+
+    ''' <summary>
+    ''' 轮询 Terracotta 状态并同步到页面。
+    ''' 按文档建议 500ms 间隔；只处理 index 增大的响应。
+    ''' </summary>
+    Private LastTcIndex As Long = -1
+
+    Private Sub StartTerracottaPolling()
+        RunInThread(
+        Sub()
+            Try
+                For i = 1 To 1200 '最多约 10 分钟
+                    Threading.Thread.Sleep(500)
+                    If Not UsingTerracotta Then Return
+                    Dim Snap = ModTerracotta.GetState()
+                    If Snap Is Nothing Then Continue For
+                    If Snap.Index <= LastTcIndex Then Continue For
+                    LastTcIndex = Snap.Index
+                    RunInUi(Sub() ApplyTerracottaState(Snap))
+                    '终态就停止轮询
+                    If Snap.State = ModTerracotta.RoomState.HostOk OrElse
+                       Snap.State = ModTerracotta.RoomState.GuestOk OrElse
+                       Snap.State = ModTerracotta.RoomState.Exception Then Return
+                Next
+            Catch ex As Exception
+                Logger.Warn(ex, "Terracotta 状态轮询异常")
+            End Try
+        End Sub)
+    End Sub
+
+    ''' <summary>把 Terracotta 状态映射到页面 UI。</summary>
+    Private Sub ApplyTerracottaState(Snap As ModTerracotta.StateSnapshot)
+        Try
+            Select Case Snap.State
+                Case ModTerracotta.RoomState.Waiting
+                    LabLoadTitle.Text = "待机中……"
+                Case ModTerracotta.RoomState.HostScanning
+                    LabLoadTitle.Text = "正在扫描本机 Minecraft 端口……"
+                    LabLoadTitle.Text &= vbCrLf & "请先进入存档并对局域网开放"
+                Case ModTerracotta.RoomState.HostStarting
+                    LabLoadTitle.Text = "正在创建房间……"
+                Case ModTerracotta.RoomState.HostOk
+                    '房间就绪：切到完成页并展示邀请码
+                    ChangeState(LinkStates.Finished)
+                    LabFinishPort.Text = Snap.Room
+                    If Snap.Players.Count > 0 Then
+                        Logger.Info($"房间成员：{String.Join("、", Snap.Players)}")
+                    End If
+                Case ModTerracotta.RoomState.GuestConnecting
+                    LabLoadTitle.Text = "正在连接房主……"
+                Case ModTerracotta.RoomState.GuestStarting
+                    LabLoadTitle.Text = $"正在建立连接……（难度：{Snap.Difficulty}）"
+                Case ModTerracotta.RoomState.GuestOk
+                    ChangeState(LinkStates.Finished)
+                    LabFinishPort.Text = Snap.Url
+                Case ModTerracotta.RoomState.Exception
+                    Dim Reason = TerracottaExceptionText(Snap.ExceptionType)
+                    ChangeState(LinkStates.Failed)
+                    Panic("联机失败", Reason)
+                Case Else
+                    LabLoadTitle.Text = "等待 Terracotta 响应……"
+            End Select
+        Catch ex As Exception
+            Logger.Warn(ex, "应用 Terracotta 状态失败")
+        End Try
+    End Sub
+
+    ''' <summary>把 Terracotta 的异常码翻译成人话。</summary>
+    Private Function TerracottaExceptionText(Type As Integer) As String
+        Select Case Type
+            Case 0 : Return "无法连接房主，房间可能已关闭或网络不稳定。"
+            Case 1 : Return "与房主的连接中断。"
+            Case 2 : Return "加入方联机组件崩溃，请重试。"
+            Case 3 : Return "房主联机组件崩溃。"
+            Case 4 : Return "房主已退出存档，房间自动关闭。"
+            Case 5 : Return "联机协议错误，请反馈给开发者。"
+            Case Else : Return "联机失败，原因未知。"
+        End Select
+    End Function
 
 End Class

@@ -33,3 +33,6 @@ appsettings.local.json
 Thumbs.db
 Desktop.ini
 .DS_Store
+# MSBuild 的 XAML 编译临时文件
+*_wpftmp.vbproj
+*.vbproj.tmp

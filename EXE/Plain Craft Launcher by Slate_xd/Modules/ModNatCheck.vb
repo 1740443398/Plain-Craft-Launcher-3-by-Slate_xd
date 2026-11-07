@@ -48,12 +48,6 @@ Public Module ModNatCheck
         Public Property PublicEndpoint As String = ""
         ''' <summary>人类可读的说明。</summary>
         Public Property Detail As String = ""
-        ''' <summary>是否适合联机。</summary>
-        Public ReadOnly Property IsGood As Boolean
-            Get
-                Return Type = NatType.OpenInternet OrElse Type = NatType.FullCone OrElse Type = NatType.RestrictedCone
-            End Get
-        End Property
     End Class
 
     'STUN 常量（RFC 5389）

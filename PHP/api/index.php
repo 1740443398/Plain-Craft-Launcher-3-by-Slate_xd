@@ -66,7 +66,19 @@ function fail($msg, $code = 400) { respond(['ok' => false, 'error' => $msg], $co
 
 function ensureDir($p) { if (!is_dir($p)) @mkdir($p, 0755, true); }
 
+/**
+ * 校验数据文件名，拒绝任何路径穿越。
+ * 目前所有调用点传的都是字面量，但仍要挡住将来可能引入的动态名字：
+ * 一旦 $name 里混进 "../"，就会写到 data 目录之外。
+ */
+function safeDataName($name) {
+    if (!is_string($name) || $name === '') fail('非法的数据名', 500);
+    if (!preg_match('/^[A-Za-z0-9_\-]+$/', $name)) fail('非法的数据名', 500);
+    return $name;
+}
+
 function readJson($name, $default) {
+    $name = safeDataName($name);
     $p = DATA_DIR . '/' . $name . '.json';
     if (!file_exists($p)) return $default;
     $raw = @file_get_contents($p);
@@ -76,6 +88,7 @@ function readJson($name, $default) {
 }
 
 function writeJson($name, $data) {
+    $name = safeDataName($name);
     ensureDir(DATA_DIR);
     $p = DATA_DIR . '/' . $name . '.json';
     $tmp = $p . '.tmp';
@@ -530,6 +543,17 @@ switch ($action) {
 
         // 若有上传的安装包，落盘到 data/pkgs/
         if (!empty($_FILES['package']) && ($_FILES['package']['error'] ?? 1) === UPLOAD_ERR_OK) {
+            // 上传校验：只接受 PE 可执行文件，且限制体积
+            $tmpFile = $_FILES['package']['tmp_name'];
+            $fileSize = @filesize($tmpFile);
+            if ($fileSize === false || $fileSize < 1024) fail('安装包太小，可能不是有效文件');
+            if ($fileSize > 200 * 1024 * 1024) fail('安装包超过 200 MB 上限');
+            // 读前两个字节确认是 MZ（PE 文件头），防止误传其它文件
+            $fh = @fopen($tmpFile, 'rb');
+            if ($fh === false) fail('无法读取上传文件', 500);
+            $magic = fread($fh, 2);
+            fclose($fh);
+            if ($magic !== 'MZ') fail('安装包不是有效的 Windows 可执行文件');
             $pkgDir = DATA_DIR . '/pkgs';
             ensureDir($pkgDir);
             $safeName = preg_replace('/[^A-Za-z0-9._-]/', '_', $v) . '.exe';
@@ -760,18 +784,20 @@ switch ($action) {
     case 'link_config':
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
-            'Link' => [
-                // EasyTier 版本号，客户端用它判断是否需要重新下载
-                'EasyTierVersion' => 264,
-                // 下载地址列表，{arch} 会被替换成 x86_64 / arm64 / i686
+            // 联机改用 Terracotta（陶瓦联机）：
+            // 它自带完整的 HTTP API 与 NAT 难度评估，比手写 EasyTier 命令行可靠。
+            // 集成方式遵循其 AGPL 例外条款第 2 条（通过 HTTP API 交互 + 界面标注版权）。
+            'Terracotta' => [
+                'Version' => '0.4.2',
                 'Downloads' => [
-                    'https://github.com/EasyTier/EasyTier/releases/download/v2.6.4/easytier-windows-{arch}-v2.6.4.zip',
-                    'https://ghfast.top/https://github.com/EasyTier/EasyTier/releases/download/v2.6.4/easytier-windows-{arch}-v2.6.4.zip',
-                    'https://gh-proxy.com/https://github.com/EasyTier/EasyTier/releases/download/v2.6.4/easytier-windows-{arch}-v2.6.4.zip',
+                    'https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz',
+                    'https://ghfast.top/https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz',
+                    'https://gh-proxy.com/https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz',
                 ],
-                // 低于这个版本码的客户端不允许联机（留空表示不限制）
-                'MinVersionCode' => 100,
+                'Copyright' => 'Terracotta 陶瓦联机 by burningtnt',
+                'License' => 'AGPL-3.0-or-later（本项目通过 HTTP API 交互，符合其例外条款）',
             ],
+            'MinVersionCode' => 100,
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         exit;
 
