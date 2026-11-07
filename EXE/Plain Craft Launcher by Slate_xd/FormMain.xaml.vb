@@ -558,6 +558,24 @@ Public Class FormMain
         End If
         '关闭联机？
         If FrmLinkMain?.TryExit(Not SendWarning, True) Then Return
+
+        '服务端还在跑？
+        '不处理的话，退出后它变成孤儿进程：玩家看不到，却一直占着端口和内存。
+        If ModServer.IsRunning Then
+            Dim SrvChoice As Integer = 1
+            If SendWarning Then
+                SrvChoice = MyMsgBox($"服务端「{ModServer.RunningVersion?.Name}」还在运行。" & vbCrLf & vbCrLf &
+                                      "退出启动器会一并停止它（会先保存世界）。要继续吗？",
+                                      "服务端仍在运行", "停止并退出", "取消")
+                If SrvChoice = 0 OrElse SrvChoice = 2 Then Return
+            End If
+            Try
+                Logger.Info("退出前停止服务端")
+                ModServer.StopServer()
+            Catch ex As Exception
+                Logger.Warn(ex, "退出前停止服务端失败")
+            End Try
+        End If
         '关闭
         RunInUiWait(
         Sub()
@@ -1202,6 +1220,7 @@ Public Class FormMain
 
 
         LinkLobby = 12
+        PluginHost = 13
     End Enum
     ''' <summary>
     ''' 次要页面种类。其数值必须与 StackPanel 中的下标一致。
@@ -1511,10 +1530,19 @@ Public Class FormMain
                     PageChangeAnim(New MyPageLeft, FrmLinkLobby)
                 Case PageType.Server '开服
                     If FrmServerMain Is Nothing Then FrmServerMain = New PageServerMain
-                    PageChangeAnim(New MyPageLeft, FrmServerMain)
+                    If FrmServerLeft Is Nothing Then FrmServerLeft = New PageServerLeft
+                    FrmServerLeft.PageID = 0
+                    FrmServerMain.ShowSection(0)
+                    PageChangeAnim(FrmServerLeft, FrmServerMain)
+                Case PageType.PluginHost '插件自带页面（标题栏入口）
+                    If FrmPluginHost Is Nothing Then FrmPluginHost = New PagePluginHost
+                    PageChangeAnim(New MyPageLeft, FrmPluginHost)
                 Case PageType.Plugin '插件（独立顶级页面）
                     If FrmPluginMain Is Nothing Then FrmPluginMain = New PageOtherPlugin
-                    PageChangeAnim(New MyPageLeft, FrmPluginMain)
+                    If FrmPluginLeft Is Nothing Then FrmPluginLeft = New PagePluginLeft
+                    FrmPluginLeft.PageID = 0
+                    FrmPluginMain.ShowSection(0)
+                    PageChangeAnim(FrmPluginLeft, FrmPluginMain)
             End Select
 #End Region
 
@@ -1742,6 +1770,88 @@ Public Class FormMain
     Public lastMouseArg As MouseEventArgs = Nothing
     Private Sub FormMain_MouseMove(sender As Object, e As MouseEventArgs) Handles Me.MouseMove
         lastMouseArg = e
+    End Sub
+
+
+    '==== 插件标题栏入口 ====
+
+    ''' <summary>已动态插入的标题栏按钮，按插件 Id 索引，便于重建时清理。</summary>
+    Private PluginTitleButtons As New List(Of MyRadioButton)
+
+    ''' <summary>
+    ''' 按当前已启用插件重建标题栏入口。
+    ''' <para>
+    ''' 每个声明了 <c>titlebar: true</c> 的插件都会得到一个按钮，点进去显示它自己的页面。
+    ''' 这是插件给启动器「加新功能」的方式，不需要改启动器源码。
+    ''' </para>
+    ''' </summary>
+    Public Sub RebuildPluginTitleButtons()
+        Try
+            '先移除旧的
+            For Each B In PluginTitleButtons
+                Try
+                    RemoveHandler B.Check, AddressOf PluginTitle_Check
+                    PanTitleSelect.Children.Remove(B)
+                Catch
+                End Try
+            Next
+            PluginTitleButtons.Clear()
+
+            Dim Hosts = ModPlugin.Plugins.Where(Function(p) p IsNot Nothing AndAlso
+                                                          p.IsUsable AndAlso
+                                                          p.Enabled AndAlso
+                                                          p.Manifest IsNot Nothing AndAlso
+                                                          p.Manifest.Titlebar).ToList()
+            If Hosts.Count = 0 Then Return
+
+            For Each Plg In Hosts
+                Try
+                    Dim Btn As New MyRadioButton With {
+                        .Text = If(String.IsNullOrWhiteSpace(Plg.Manifest.TitlebarText), Plg.Manifest.Name, Plg.Manifest.TitlebarText),
+                        .Tag = Plg,
+                        .Margin = New Thickness(5, 0, 5, 0),
+                        .Padding = New Thickness(2, 0, 2, 0),
+                        .LogoScale = 0.9
+                    }
+                    '有自定义图标就用，没有给个通用方块
+                    Dim IconData = Plg.Manifest.TitlebarIcon
+                    If String.IsNullOrWhiteSpace(IconData) Then
+                        IconData = "M448 64h128v320h320v128H576v320H448V512H128V384h320z"
+                    End If
+                    Try
+                        Btn.Logo = IconData
+                    Catch ex As Exception
+                        Logger.Warn(ex, $"插件图标无效：{Plg.DisplayName}")
+                    End Try
+                    AddHandler Btn.Check, AddressOf PluginTitle_Check
+                    PanTitleSelect.Children.Add(Btn)
+                    PluginTitleButtons.Add(Btn)
+                Catch ex As Exception
+                    Logger.Warn(ex, $"添加插件标题栏按钮失败：{Plg?.DisplayName}")
+                End Try
+            Next
+            Logger.Info($"标题栏已加入 {PluginTitleButtons.Count} 个插件入口")
+        Catch ex As Exception
+            Logger.Error(ex, "重建插件标题栏失败")
+        End Try
+    End Sub
+
+    ''' <summary>点插件标题栏按钮：切到插件宿主页并指定目标。</summary>
+    Private Sub PluginTitle_Check(sender As Object, raiseByMouse As Boolean)
+        Try
+            If IsChangingPage Then Return
+            Dim Btn = TryCast(sender, MyRadioButton)
+            Dim Plg = TryCast(Btn?.Tag, ModPlugin.PluginEntry)
+            If Plg Is Nothing Then Return
+
+            If FrmPluginHost Is Nothing Then FrmPluginHost = New PagePluginHost
+            '换插件时清掉缓存键，强制重新加载内容
+            FrmPluginHost.Target = Plg
+            PageChangeActual(PageType.PluginHost)
+        Catch ex As Exception
+            Logger.Error(ex, "切换到插件页面失败")
+            Hint($"打开插件失败：{ex.Message}", HintType.Red)
+        End Try
     End Sub
 
 End Class

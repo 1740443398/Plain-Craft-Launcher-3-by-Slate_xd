@@ -17,6 +17,7 @@ Write-Host '编译测试...'
     /r:$NEWT `
     (Join-Path $HERE 'ModServer.Test.vb') `
     (Join-Path $HERE 'ModServer.Test.Stub.vb') `
+    (Join-Path $ROOT 'Modules\ModServerCore.vb') `
     (Join-Path $ROOT 'Modules\ModServer.vb')
 if ($LASTEXITCODE -ne 0) { Write-Host '[X] 编译失败' -ForegroundColor Red; exit 1 }
 

@@ -5,60 +5,171 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d" x:Class="PageServerMain"
     PanScroll="Content">
-    <StackPanel Margin="0,0,20,20">
+    <Grid x:Name="Content" Margin="0,0,20,20">
 
-        <!-- 本地服务端版本 -->
-        <local:MyCard Title="本地服务端" Margin="0,0,0,15">
-            <StackPanel Margin="25,38,25,16">
-                <TextBlock x:Name="LabLocalSummary" TextWrapping="Wrap" Text="正在扫描……" />
-                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                    <local:MyButton x:Name="BtnServerDownloadNew" Text="下载服务端" Height="32" MinWidth="120" />
-                    <local:MyButton x:Name="BtnServerRescan" Text="重新扫描" Height="32" MinWidth="100" Margin="10,0,0,0" />
-                    <local:MyButton x:Name="BtnServerFolder" Text="打开目录" Height="32" MinWidth="100" Margin="10,0,0,0" />
+        <!-- ===== 0. 服务端列表 ===== -->
+        <StackPanel x:Name="PanSecVersions">
+            <local:MyCard Title="本地服务端" Margin="0,0,0,15">
+                <StackPanel Margin="25,38,25,16">
+                    <TextBlock x:Name="LabLocalSummary" TextWrapping="Wrap" Text="正在扫描……" />
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <local:MyButton x:Name="BtnServerRescan" Text="重新扫描" Height="32" MinWidth="100" />
+                        <local:MyButton x:Name="BtnServerFolder" Text="打开目录" Height="32" MinWidth="100" Margin="10,0,0,0" />
+                    </StackPanel>
+                    <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" FontSize="12"
+                               Foreground="{DynamicResource ColorBrushGray3}"
+                               Text="每个服务端版本有独立目录与世界存档，互不干扰。&#xa;还没有服务端？到左侧「下载核心」按用途挑一个。" />
                 </StackPanel>
-                <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" FontSize="12"
-                           Foreground="{DynamicResource ColorBrushGray3}"
-                           Text="每个服务端版本有独立的目录与世界存档，互不干扰。&#xa;这里只提供官方服务端下载，不会下载客户端。" />
-            </StackPanel>
-        </local:MyCard>
+            </local:MyCard>
 
-        <!-- 本地列表 -->
-        <StackPanel x:Name="PanServerList" />
+            <StackPanel x:Name="PanServerList" />
 
-        <!-- 空状态 -->
-        <local:MyCard x:Name="PanServerEmpty" Margin="0,0,0,15" Visibility="Collapsed">
-            <StackPanel Margin="25,38,25,30">
-                <TextBlock Text="还没有安装服务端" FontSize="15" HorizontalAlignment="Center"
-                           Foreground="{DynamicResource ColorBrushGray2}" />
-                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" HorizontalAlignment="Center"
-                           TextAlignment="Center" FontSize="12.5"
-                           Foreground="{DynamicResource ColorBrushGray3}"
-                           Text="点「下载服务端」挑一个版本，或在下方从模板快速创建。" />
-            </StackPanel>
-        </local:MyCard>
+            <local:MyCard x:Name="PanServerEmpty" Margin="0,0,0,15" Visibility="Collapsed">
+                <StackPanel x:Name="PanServerEmptyInner" Margin="25,32,25,20" />
+            </local:MyCard>
+        </StackPanel>
 
-        <!-- 下载面板（默认隐藏） -->
-        <local:MyCard x:Name="PanDownload" Margin="0,0,0,15" Visibility="Collapsed" Title="下载服务端">
-            <StackPanel Margin="25,38,25,16">
-                <TextBlock x:Name="LabDownloadStatus" TextWrapping="Wrap" Text="正在获取可下载版本……" />
-                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                    <local:MyComboBox x:Name="ComboServerVersion" Height="32" MinWidth="260" />
-                    <local:MyButton x:Name="BtnStartDownload" Text="开始下载" Height="32" MinWidth="110" Margin="10,0,0,0" />
-                    <local:MyButton x:Name="BtnCancelDownload" Text="收起" Height="32" MinWidth="90" Margin="10,0,0,0" />
+        <!-- ===== 1. 下载核心 ===== -->
+        <StackPanel x:Name="PanSecDownload" Visibility="Collapsed">
+            <!-- Java 状态前置：不要等下载完点启动才发现没 Java -->
+            <local:MyCard x:Name="PanJavaHint" Margin="0,0,0,15" Visibility="Collapsed">
+                <StackPanel Margin="25,20,25,18">
+                    <TextBlock x:Name="LabJavaHint" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <local:MyButton x:Name="BtnJavaRetry" Text="重新检测" Height="30" MinWidth="100" />
+                        <local:MyButton x:Name="BtnJavaGoSetup" Text="去设置里配置 Java" Height="30" MinWidth="150"
+                                        Margin="10,0,0,0" />
+                    </StackPanel>
                 </StackPanel>
-                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="12"
-                           Foreground="{DynamicResource ColorBrushGray3}"
-                           Text="只列出官方提供的服务端版本。老版本没有独立服务端，不会出现在这里。" />
-            </StackPanel>
-        </local:MyCard>
+            </local:MyCard>
 
-        <!-- 预设模板 -->
-        <local:MyCard x:Name="PanTemplates" Margin="0,0,0,15" Title="快速模板">
-            <StackPanel Margin="25,38,25,16">
-                <TextBlock TextWrapping="Wrap" Text="按用途预先把配置调好，创建后仍可修改。" />
-                <StackPanel x:Name="PanTemplateList" Margin="0,12,0,0" />
-            </StackPanel>
-        </local:MyCard>
+            <local:MyCard Title="第一步：选服务端类型" Margin="0,0,0,15">
+                <StackPanel Margin="25,38,25,16">
+                    <TextBlock TextWrapping="Wrap"
+                               Text="不同核心能做的事不一样，选错就是白下载。先看这张表：" />
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="原版" FontWeight="SemiBold" Margin="0,4" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="只能玩原版，不能装插件或模组" TextWrapping="Wrap" Margin="0,4" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="插件服" FontWeight="SemiBold" Margin="0,4" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="能装插件（如领地、经济），不能装模组" TextWrapping="Wrap" Margin="0,4" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="模组服" FontWeight="SemiBold" Margin="0,4" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="能装模组（如机械动力、暮色森林），不能装插件" TextWrapping="Wrap" Margin="0,4" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="基岩版" FontWeight="SemiBold" Margin="0,4" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="给手机/主机玩家用的独立服务端（不是 Java 版）" TextWrapping="Wrap" Margin="0,4" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="代理端" FontWeight="SemiBold" Margin="0,4" />
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="把多个子服串成一个入口，本身不承载世界" TextWrapping="Wrap" Margin="0,4" />
+                    </Grid>
+                </StackPanel>
+            </local:MyCard>
 
-    </StackPanel>
+            <local:MyCard Title="第二步：选核心" Margin="0,0,0,15">
+                <StackPanel Margin="25,38,25,16">
+                    <TextBlock x:Name="LabCoreStatus" TextWrapping="Wrap" Text="正在获取核心列表……" />
+                    <StackPanel x:Name="PanKindFilter" Orientation="Horizontal" Margin="0,12,0,0" />
+                    <StackPanel x:Name="PanCoreList" Margin="0,10,0,0" />
+                </StackPanel>
+            </local:MyCard>
+
+            <local:MyCard Title="第三步：选版本并下载" Margin="0,0,0,15">
+                <StackPanel Margin="25,38,25,16">
+                    <TextBlock x:Name="LabDownloadStatus" TextWrapping="Wrap" Text="先在上面选一个核心。" />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <local:MyComboBox x:Name="ComboGameVersion" Height="32" MinWidth="200" />
+                        <local:MyComboBox x:Name="ComboBuild" Height="32" MinWidth="240" Margin="10,0,0,0" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <local:MyButton x:Name="BtnStartDownload" Text="开始下载" Height="32" MinWidth="110" />
+                        <local:MyButton x:Name="BtnUseMojang" Text="改用 Mojang 官方源" Height="32" MinWidth="160"
+                                        Margin="10,0,0,0" Visibility="Collapsed" />
+                    </StackPanel>
+                    <!-- 下载进度：比例来自实际读取字节数 -->
+                    <StackPanel x:Name="PanDownloadProgress" Margin="0,14,0,0" Visibility="Collapsed">
+                        <TextBlock x:Name="LabProgressText" FontSize="12.5" Margin="0,0,0,6" />
+                        <Grid Height="8">
+                            <Border Background="{DynamicResource ColorBrushGray1}" CornerRadius="4" />
+                            <Border x:Name="BarDownload" Background="{DynamicResource ColorBrush3}"
+                                    CornerRadius="4" HorizontalAlignment="Left" Width="0" />
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- 下载完成后的下一步：开服是连续动作，不能让玩家停在这 -->
+                    <Border x:Name="PanDownloadDone" Margin="0,14,0,0" Visibility="Collapsed"
+                            Background="{DynamicResource ColorBrushGray1}" CornerRadius="8" Padding="16">
+                        <StackPanel>
+                            <TextBlock x:Name="LabDoneTitle" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock x:Name="LabDoneDesc" FontSize="12" TextWrapping="Wrap"
+                                       Margin="0,5,0,0" Foreground="{DynamicResource ColorBrushGray3}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <local:MyButton x:Name="BtnGoConfig" Text="去配置端口与内存" Height="30" MinWidth="150" />
+                                <local:MyButton x:Name="BtnGoStart" Text="直接去启动" Height="30" MinWidth="110" Margin="10,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="12"
+                               Foreground="{DynamicResource ColorBrushGray3}"
+                               Text="下载源为 FastMirror 镜像。原版核心可切换回 Mojang 官方直连。&#xa;这里只下服务端核心（server.jar），不会下成客户端。" />
+                </StackPanel>
+            </local:MyCard>
+        </StackPanel>
+
+        <!-- ===== 2. 控制台 ===== -->
+        <StackPanel x:Name="PanSecConsole" Visibility="Collapsed">
+            <local:MyCard Title="服务器控制台" Margin="0,0,0,15">
+                <StackPanel Margin="25,38,25,16">
+                    <TextBlock x:Name="LabConsoleStatus" TextWrapping="Wrap" Text="当前没有运行中的服务器。" />
+                    <local:MyTextBox x:Name="TextConsoleCommand" Height="32" Margin="0,12,0,0"
+                                     HintText="输入命令并回车发送，例如 say 你好 或 list" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <local:MyButton x:Name="BtnConsoleSend" Text="发送" Height="30" MinWidth="80" />
+                        <local:MyButton x:Name="BtnConsoleStop" Text="停止服务器" Height="30" MinWidth="110" Margin="10,0,0,0" />
+                        <local:MyButton x:Name="BtnConsoleClear" Text="清空输出" Height="30" MinWidth="90" Margin="10,0,0,0" />
+                    </StackPanel>
+                </StackPanel>
+            </local:MyCard>
+
+            <local:MyCard Title="输出" Margin="0,0,0,15">
+                <ScrollViewer x:Name="ScrollConsole" Margin="20,34,20,16" Height="340"
+                              VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="TextConsoleOutput" TextWrapping="Wrap" FontFamily="Consolas"
+                               FontSize="12" Text="" />
+                </ScrollViewer>
+            </local:MyCard>
+        </StackPanel>
+
+        <!-- ===== 3. 状态 ===== -->
+        <StackPanel x:Name="PanSecStatus" Visibility="Collapsed">
+            <local:MyCard Title="运行状态" Margin="0,0,0,15">
+                <StackPanel Margin="25,38,25,16">
+                    <TextBlock x:Name="LabStatusSummary" TextWrapping="Wrap" Text="加载中……" />
+                    <local:MyButton x:Name="BtnStatusRefresh" Text="刷新状态" Height="32" MinWidth="110"
+                                    Margin="0,14,0,0" HorizontalAlignment="Left" />
+                </StackPanel>
+            </local:MyCard>
+            <StackPanel x:Name="PanStatusDetail" />
+        </StackPanel>
+
+        <!-- ===== 4. 模板 ===== -->
+        <StackPanel x:Name="PanSecTemplates" Visibility="Collapsed">
+            <local:MyCard Title="快速模板" Margin="0,0,0,15">
+                <StackPanel Margin="25,38,25,16">
+                    <TextBlock TextWrapping="Wrap"
+                               Text="按用途预先把内存与正版验证调好，创建后仍可单独修改。&#xa;模板只创建配置，服务端核心仍需在「下载核心」里下载。" />
+                </StackPanel>
+            </local:MyCard>
+            <StackPanel x:Name="PanTemplateList" />
+        </StackPanel>
+
+    </Grid>
 </local:MyPageRight>

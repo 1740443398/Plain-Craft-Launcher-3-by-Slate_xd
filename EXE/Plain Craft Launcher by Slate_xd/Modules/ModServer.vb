@@ -414,7 +414,12 @@ Public Module ModServer
             }
             Dim Proc As New Process With {.StartInfo = Psi, .EnableRaisingEvents = True}
             AddHandler Proc.OutputDataReceived, Sub(sender, e)
-                                                    If e.Data IsNot Nothing Then Logger.Info($"[服务端 {V.Name}] {e.Data}")
+                                                    If e.Data Is Nothing Then Return
+                                                    Logger.Info($"[服务端 {V.Name}] {e.Data}")
+                                                    Try
+                                                        OutputHandler?.Invoke(e.Data)
+                                                    Catch
+                                                    End Try
                                                 End Sub
             AddHandler Proc.ErrorDataReceived, Sub(sender, e)
                                                    If e.Data IsNot Nothing Then Logger.Warn($"[服务端 {V.Name}] {e.Data}")
@@ -434,6 +439,24 @@ Public Module ModServer
             Return False
         End Try
     End Function
+
+    ''' <summary>向运行中的服务端发送一条控制台命令。</summary>
+    Public Function SendCommand(Command As String) As Boolean
+        Try
+            If Not IsRunning Then Return False
+            If String.IsNullOrWhiteSpace(Command) Then Return False
+            Running.StandardInput.WriteLine(Command)
+            Running.StandardInput.Flush()
+            Logger.Info($"[服务端 {RunningVersion?.Name}] > {Command}")
+            Return True
+        Catch ex As Exception
+            Logger.Warn(ex, "发送服务端命令失败")
+            Return False
+        End Try
+    End Function
+
+    ''' <summary>控制台输出回调，由页面注册。</summary>
+    Public Property OutputHandler As Action(Of String) = Nothing
 
     ''' <summary>优雅停止：先发 stop，15 秒超时再强杀。</summary>
     Public Sub StopServer()
@@ -482,6 +505,9 @@ Public Module ModServer
         End Try
     End Function
 
+    ''' <summary>下载进度回调：参数为 0~1 的比例，或 -1 表示总量未知。</summary>
+    Public Property DownloadProgress As Action(Of Double) = Nothing  ' 下载进度回调
+
     Private Function NetGetBytes(Url As String, Optional Loader As LoaderBase = Nothing) As Byte()
         Try
             'Mojang 接口只支持 TLS 1.2+，.NET Framework 4.8 默认可能不带
@@ -505,6 +531,14 @@ Public Module ModServer
                             If Loader IsNot Nothing AndAlso Total > 0 Then
                                 Loader.Progress = CDbl(Ms.Length) / Total
                             End If
+                                If DownloadProgress IsNot Nothing Then
+                                    Dim Ratio As Double = -1.0
+                                    If Total > 0 Then Ratio = CDbl(Ms.Length) / CDbl(Total)
+                                    Try
+                                        DownloadProgress.Invoke(Ratio)
+                                    Catch
+                                    End Try
+                                End If
                         Loop
                         Return Ms.ToArray()
                     End Using
@@ -513,6 +547,73 @@ Public Module ModServer
         Catch ex As Exception
             Logger.Warn(ex, $"下载失败：{Url}")
             Return Nothing
+        End Try
+    End Function
+
+
+    ''' <summary>
+    ''' 下载一个服务端核心到指定版本目录，并建立版本配置。
+    ''' </summary>
+    Public Function DownloadCore(File As ModServerCore.CoreFile, VersionName As String) As Boolean
+        Try
+            If File Is Nothing OrElse String.IsNullOrWhiteSpace(File.Url) Then
+                Hint("没有可用的下载地址", HintType.Red)
+                Return False
+            End If
+            If String.IsNullOrWhiteSpace(VersionName) Then Return False
+
+            Dim Dir = System.IO.Path.Combine(ServerDir, VersionName)
+            DirectoryUtils.Create(Dir)
+            Dim Target = System.IO.Path.Combine(Dir, "server.jar")
+            Dim Temp = Target & ".download"
+
+            Logger.Info($"下载服务端核心：{File.CoreName} {File.McVersion} {File.Build}")
+            Dim Data As Byte() = NetGetBytes(File.Url, Nothing)
+            If Data Is Nothing OrElse Data.Length < 1024 * 1024 Then
+                Hint("服务端下载失败或文件过小", HintType.Red)
+                Return False
+            End If
+
+            '校验：jar 是 zip，头两字节应为 PK
+            If Data.Length < 2 OrElse Data(0) <> &H50 OrElse Data(1) <> &H4B Then
+                Hint("下载到的不是有效的服务端 jar", HintType.Red)
+                Return False
+            End If
+
+            '有 SHA1 就校验
+            If Not String.IsNullOrWhiteSpace(File.Sha1) Then
+                Try
+                    Using Sha = Security.Cryptography.SHA1.Create()
+                        Dim Actual = BitConverter.ToString(Sha.ComputeHash(Data)).Replace("-", "").ToLowerInvariant()
+                        If Not String.Equals(Actual, File.Sha1.Trim(), StringComparison.OrdinalIgnoreCase) Then
+                            Hint("下载校验失败，文件可能损坏，请重试", HintType.Red)
+                            Logger.Warn($"SHA1 不匹配：期望 {File.Sha1}，实际 {Actual}")
+                            Return False
+                        End If
+                        Logger.Info("SHA1 校验通过")
+                    End Using
+                Catch ex As Exception
+                    Logger.Warn(ex, "SHA1 校验出错，跳过")
+                End Try
+            End If
+
+            IO.File.WriteAllBytes(Temp, Data)
+            If FileUtils.Exists(Target) Then FileUtils.Delete(Target, True)
+            IO.File.Move(Temp, Target)
+
+            Dim V As New ServerVersion With {.Name = VersionName, .Installed = True, .JarSize = Data.Length}
+            SaveConfig(V)
+            Logger.Info($"服务端已保存：{Target}（{StringUtils.FormatByteSize(Data.Length)}）")
+            Hint($"服务端已下载：{File.CoreName} {File.McVersion}", HintType.Green)
+            Try
+                DownloadProgress?.Invoke(1.0)
+            Catch
+            End Try
+            Return True
+        Catch ex As Exception
+            Logger.Error(ex, "下载服务端核心失败")
+            Hint($"下载失败：{ex.Message}", HintType.Red)
+            Return False
         End Try
     End Function
 

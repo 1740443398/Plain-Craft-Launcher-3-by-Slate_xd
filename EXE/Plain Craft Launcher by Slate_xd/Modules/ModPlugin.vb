@@ -57,6 +57,46 @@ Public Module ModPlugin
         ''' <summary>最低启动器版本码，低于此值不加载。</summary>
         Public Property MinVersionCode As Integer = 0
 
+        ''' <summary>
+        ''' 头像文件名（放在插件目录里）。留空则用自动生成的字母头像。
+        ''' 支持 png / jpg / bmp / ico，建议 64x64。
+        ''' </summary>
+        Public Property Icon As String = ""
+
+        ''' <summary>
+        ''' 自定义配置页的 XAML 文件名（放在插件目录里）。
+        ''' 留空则不显示「设置」按钮。
+        ''' </summary>
+        Public Property ConfigPage As String = ""
+
+        ''' <summary>
+        ''' 插件分类，用于在列表里分组。留空归入「其他」。
+        ''' </summary>
+        Public Property Category As String = ""
+
+        ''' <summary>
+        ''' 主页地址（可选）。列表里提供一个「主页」按钮。
+        ''' </summary>
+        Public Property Homepage As String = ""
+
+        ''' <summary>
+        ''' 是否在标题栏加一个入口。为 True 时插件的 main.xaml 会作为一个独立页面。
+        ''' <para>
+        ''' 这是插件给启动器加新功能的主要方式：声明 titlebar 后，
+        ''' 玩家点标题栏按钮就能进入插件页面，和内置页面一样。
+        ''' </para>
+        ''' </summary>
+        Public Property Titlebar As Boolean = False
+
+        ''' <summary>标题栏按钮上的文字。留空则用 name。</summary>
+        Public Property TitlebarText As String = ""
+
+        ''' <summary>
+        ''' 标题栏按钮的图标（SVG 路径数据，24x24 视口）。
+        ''' 留空则用一个通用方块图标。
+        ''' </summary>
+        Public Property TitlebarIcon As String = ""
+
         ''' <summary>清单是否具备加载所需的最少字段。</summary>
         Public ReadOnly Property IsValid As Boolean
             Get
@@ -89,6 +129,35 @@ Public Module ModPlugin
         Public Property FailureReason As String = ""
         ''' <summary>用户是否已启用。</summary>
         Public Property Enabled As Boolean = True
+
+        ''' <summary>头像文件的绝对路径；未提供时为空。</summary>
+        Public Property IconPath As String = ""
+
+        ''' <summary>自定义配置页的绝对路径；未提供时为空。</summary>
+        Public Property ConfigPath As String = ""
+
+        ''' <summary>是否提供了自定义头像。</summary>
+        Public ReadOnly Property HasIcon As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(IconPath) AndAlso FileUtils.Exists(IconPath)
+            End Get
+        End Property
+
+        ''' <summary>是否提供了自定义配置页。</summary>
+        Public ReadOnly Property HasConfigPage As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(ConfigPath) AndAlso FileUtils.Exists(ConfigPath)
+            End Get
+        End Property
+
+        ''' <summary>用于自动生成字母头像的文字（名字首字）。</summary>
+        Public ReadOnly Property IconInitial As String
+            Get
+                Dim N = DisplayName
+                If String.IsNullOrWhiteSpace(N) Then Return "?"
+                Return N.Substring(0, 1).ToUpperInvariant()
+            End Get
+        End Property
 
         Public ReadOnly Property IsUsable As Boolean
             Get
@@ -149,6 +218,16 @@ Public Module ModPlugin
 
                     '入口文件
                     Entry.EntryPath = System.IO.Path.Combine(SubDir, M.Entry)
+
+                    '头像与配置页：都在插件目录内，越界路径一律忽略
+                    If Not String.IsNullOrWhiteSpace(M.Icon) Then
+                        Dim IconFull = ResolveInsidePlugin(SubDir, M.Icon)
+                        If IconFull IsNot Nothing AndAlso FileUtils.Exists(IconFull) Then Entry.IconPath = IconFull
+                    End If
+                    If Not String.IsNullOrWhiteSpace(M.ConfigPage) Then
+                        Dim CfgFull = ResolveInsidePlugin(SubDir, M.ConfigPage)
+                        If CfgFull IsNot Nothing AndAlso FileUtils.Exists(CfgFull) Then Entry.ConfigPath = CfgFull
+                    End If
                     If Not FileUtils.Exists(Entry.EntryPath) Then
                         Entry.FailureReason = $"找不到入口文件 {M.Entry}"
                         Plugins.Add(Entry)
@@ -250,4 +329,27 @@ Public Module ModPlugin
         End Try
     End Function
 
+
+    ''' <summary>
+    ''' 把清单里的相对路径解析到插件目录内。越界返回 Nothing。
+    ''' </summary>
+    Private Function ResolveInsidePlugin(Root As String, RelativePath As String) As String
+        Try
+            If String.IsNullOrWhiteSpace(RelativePath) Then Return Nothing
+            Dim Clean = RelativePath.Replace("/"c, "\"c).TrimStart("\"c)
+            If Clean = "" Then Return Nothing
+            For Each Part In Clean.Split("\"c)
+                If Part = ".." Then Return Nothing
+            Next
+            If Clean.Length >= 2 AndAlso Clean(1) = ":"c Then Return Nothing
+            If Clean.StartsWith("\\") Then Return Nothing
+            Dim Full = System.IO.Path.Combine(Root, Clean)
+            Dim RootFull = System.IO.Path.GetFullPath(Root).TrimEnd("\"c) & "\"
+            Dim Norm = System.IO.Path.GetFullPath(Full)
+            If Not Norm.StartsWith(RootFull, StringComparison.OrdinalIgnoreCase) Then Return Nothing
+            Return Full
+        Catch
+            Return Nothing
+        End Try
+    End Function
 End Module

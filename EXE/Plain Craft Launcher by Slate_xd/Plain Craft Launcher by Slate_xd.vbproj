@@ -235,10 +235,13 @@
     <Compile Include="Modules\ModNatCheck.vb" />
     <Compile Include="Modules\ModTerracotta.vb" />
     <Compile Include="Modules\ModTarGz.vb" />
+    <Compile Include="Modules\ModPluginAudit.vb" />
+    <Compile Include="Modules\ModPluginStore.vb" />
     <Compile Include="Modules\ModPlugin.vb" />
     <Compile Include="Modules\ModPluginScript.vb" />
     <Compile Include="Modules\ModLinkPassword.vb" />
     <Compile Include="Modules\ModLinkLobby.vb" />
+    <Compile Include="Modules\ModServerCore.vb" />
     <Compile Include="Modules\ModServer.vb" />
     <Compile Include="Modules\ModApiServer.vb" />
     <Compile Include="Modules\ModSaveBackup.vb" />
@@ -390,8 +393,17 @@
     <Compile Include="Pages\PageLink\PageLinkLobby.xaml.vb">
       <DependentUpon>PageLinkLobby.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Pages\PageServer\PageServerLeft.xaml.vb">
+      <DependentUpon>PageServerLeft.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Pages\PageServer\PageServerMain.xaml.vb">
       <DependentUpon>PageServerMain.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\PageOther\PagePluginHost.xaml.vb">
+      <DependentUpon>PagePluginHost.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\PageOther\PagePluginLeft.xaml.vb">
+      <DependentUpon>PagePluginLeft.xaml</DependentUpon>
     </Compile>
     <Compile Include="Pages\PageOther\PageOtherPlugin.xaml.vb">
       <DependentUpon>PageOtherPlugin.xaml</DependentUpon>
@@ -650,7 +662,19 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Pages\PageServer\PageServerLeft.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Pages\PageServer\PageServerMain.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Pages\PageOther\PagePluginHost.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Pages\PageOther\PagePluginLeft.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
