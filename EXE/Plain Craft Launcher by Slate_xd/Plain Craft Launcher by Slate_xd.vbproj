@@ -238,6 +238,7 @@
     <Compile Include="Modules\ModPlugin.vb" />
     <Compile Include="Modules\ModPluginScript.vb" />
     <Compile Include="Modules\ModLinkPassword.vb" />
+    <Compile Include="Modules\ModLinkLobby.vb" />
     <Compile Include="Modules\ModServer.vb" />
     <Compile Include="Modules\ModApiServer.vb" />
     <Compile Include="Modules\ModSaveBackup.vb" />
@@ -385,6 +386,9 @@
     </Compile>
     <Compile Include="Pages\PageOther\PageOtherAbout.xaml.vb">
       <DependentUpon>PageOtherAbout.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\PageLink\PageLinkLobby.xaml.vb">
+      <DependentUpon>PageLinkLobby.xaml</DependentUpon>
     </Compile>
     <Compile Include="Pages\PageServer\PageServerMain.xaml.vb">
       <DependentUpon>PageServerMain.xaml</DependentUpon>
@@ -642,6 +646,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Pages\PageLink\PageLinkLobby.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Pages\PageServer\PageServerMain.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -797,6 +805,10 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\Heads\LTCat.jpg" />
+    <Resource Include="Images\Heads\meloong.png" />
+    <Resource Include="Images\Heads\terracotta.png" />
+    <Resource Include="Images\Heads\sealantern.png" />
+    <Resource Include="Images\Heads\github.png" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

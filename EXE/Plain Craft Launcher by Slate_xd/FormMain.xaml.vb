@@ -1199,6 +1199,9 @@ Public Class FormMain
         Server = 10
 
         Plugin = 11
+
+
+        LinkLobby = 12
     End Enum
     ''' <summary>
     ''' 次要页面种类。其数值必须与 StackPanel 中的下标一致。
@@ -1469,6 +1472,9 @@ Public Class FormMain
                     PageChangeAnim(New MyPageLeft, FrmDownloadResourceDetail)
                 Case PageType.HelpDetail '帮助详情
                     PageChangeAnim(New MyPageLeft, Stack.Additional(1))
+                Case PageType.LinkLobby '联机大厅
+                    If FrmLinkLobby Is Nothing Then FrmLinkLobby = New PageLinkLobby
+                    PageChangeAnim(New MyPageLeft, FrmLinkLobby)
                 Case PageType.Server '开服
                     If FrmServerMain Is Nothing Then FrmServerMain = New PageServerMain
                     PageChangeAnim(New MyPageLeft, FrmServerMain)

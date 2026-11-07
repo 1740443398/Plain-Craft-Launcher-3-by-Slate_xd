@@ -1093,6 +1093,119 @@ switch ($action) {
         respond(['ok' => true, 'donors' => $out, 'total' => count($out)]);
         break;
 
+    // ==================== 联机大厅 ====================
+
+    /**
+     * 联机大厅：公开房间的心跳与发现。
+     *
+     * 设计要点：
+     * - 房间数据存在 data/lobby.json，只保留 90 秒内有心跳的房间
+     * - 房间号由客户端生成，服务端只做去重，不做分配
+     * - 不存储任何玩家身份信息，只有房主自己填的显示名
+     * - 密码从不上传：只在房主与客人之间用哈希校验
+     */
+    case 'lobby_list':
+        requireClient();
+        $all = readJson('lobby', []);
+        $now = time();
+        $out = [];
+        foreach ($all as $room) {
+            if ($now - intval($room['beat'] ?? 0) > 90) continue;
+            $out[] = [
+                'code'        => $room['code'] ?? '',
+                'name'        => $room['name'] ?? '',
+                'host'        => $room['host'] ?? '',
+                'version'     => $room['version'] ?? '',
+                'loader'      => $room['loader'] ?? '',
+                'players'     => intval($room['players'] ?? 0),
+                'maxPlayers'  => intval($room['maxPlayers'] ?? 8),
+                'hasPassword' => !empty($room['hasPassword']),
+                'motd'        => $room['motd'] ?? '',
+                'beat'        => intval($room['beat'] ?? 0),
+            ];
+        }
+        usort($out, function ($a, $b) {
+            if ($a['players'] !== $b['players']) return $b['players'] - $a['players'];
+            return $b['beat'] - $a['beat'];
+        });
+        respond(['ok' => true, 'rooms' => $out, 'total' => count($out)]);
+        break;
+
+    /** 房主心跳：注册或刷新自己的房间。 */
+    case 'lobby_beat':
+        requireClient();
+        $body = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($body)) {
+            respond(['ok' => false, 'error' => '请求体不是合法 JSON'], 400);
+        }
+        $code = trim(strval($body['code'] ?? ''));
+        if ($code === '' || strlen($code) > 40) {
+            respond(['ok' => false, 'error' => '房间号不合法'], 400);
+        }
+
+        $all = readJson('lobby', []);
+        $now = time();
+        $all = array_values(array_filter($all, function ($r) use ($now) {
+            return $now - intval($r['beat'] ?? 0) <= 90;
+}));
+
+        $found = false;
+        foreach ($all as &$room) {
+            if (($room['code'] ?? '') === $code) {
+                $room['name']       = mb_substr(strval($body['name'] ?? ''), 0, 40);
+                $room['host']       = mb_substr(strval($body['host'] ?? ''), 0, 24);
+                $room['version']    = mb_substr(strval($body['version'] ?? ''), 0, 20);
+                $room['loader']     = mb_substr(strval($body['loader'] ?? ''), 0, 16);
+                $room['players']    = max(0, min(999, intval($body['players'] ?? 0)));
+                $room['maxPlayers'] = max(1, min(999, intval($body['maxPlayers'] ?? 8)));
+                $room['hasPassword']= !empty($body['hasPassword']);
+                $room['motd']       = mb_substr(strval($body['motd'] ?? ''), 0, 120);
+                $room['beat']       = $now;
+                $found = true;
+                break;
+            }
+        }
+        unset($room);
+
+        if (!$found) {
+            if (count($all) >= 200) {
+                respond(['ok' => false, 'error' => '大厅房间数已达上限，请稍后再试'], 429);
+            }
+            $all[] = [
+                'code'        => $code,
+                'name'        => mb_substr(strval($body['name'] ?? ''), 0, 40),
+                'host'        => mb_substr(strval($body['host'] ?? ''), 0, 24),
+                'version'     => mb_substr(strval($body['version'] ?? ''), 0, 20),
+                'loader'      => mb_substr(strval($body['loader'] ?? ''), 0, 16),
+                'players'     => max(0, min(999, intval($body['players'] ?? 0))),
+                'maxPlayers'  => max(1, min(999, intval($body['maxPlayers'] ?? 8))),
+                'hasPassword' => !empty($body['hasPassword']),
+                'motd'        => mb_substr(strval($body['motd'] ?? ''), 0, 120),
+                'beat'        => $now,
+            ];
+        }
+
+        writeJson('lobby', $all);
+        respond(['ok' => true, 'total' => count($all)]);
+        break;
+
+    /** 房主下线：立即移除房间。 */
+    case 'lobby_remove':
+        requireClient();
+        $body = json_decode(file_get_contents('php://input'), true);
+        $code = trim(strval($body['code'] ?? ''));
+        if ($code === '') {
+            respond(['ok' => false, 'error' => '缺少房间号'], 400);
+        }
+        $all = readJson('lobby', []);
+        $before = count($all);
+        $all = array_values(array_filter($all, function ($r) use ($code) {
+            return ($r['code'] ?? '') !== $code;
+}));
+        writeJson('lobby', $all);
+        respond(['ok' => true, 'removed' => $before - count($all)]);
+        break;
+
     default:
         fail('未知接口', 404);
 }

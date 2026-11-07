@@ -177,6 +177,16 @@ Public Class PageLinkMain
         ChangeState(LinkStates.Loading)
     End Sub
 
+    '浏览大厅
+    Private Sub Lobby_MouseLeftButtonUp() Handles PanSelectLobby.MouseLeftButtonUp
+        Try
+            FrmMain.PageChange(New FormMain.PageStackData With {.Page = FormMain.PageType.LinkLobby})
+        Catch ex As Exception
+            Logger.Error(ex, "打开联机大厅失败")
+            Hint($"打开失败：{ex.Message}", HintType.Red)
+        End Try
+    End Sub
+
     '加入
     Private Shared LastCode As String = Nothing
     ''' <summary>
