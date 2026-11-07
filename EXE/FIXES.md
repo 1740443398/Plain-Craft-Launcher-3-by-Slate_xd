@@ -451,7 +451,68 @@ End If
 
 ---
 
-## 十、关键陷阱备忘
+## 十、Terracotta 联机接入
+
+**为什么换**：原来手写的 EasyTier 命令行方案能跑，但要自己拼参数、自己编码邀请码、自己判断 NAT，
+成熟度和维护成本都不如现成方案。Terracotta（陶瓦联机）是 HMCL 也在用的成熟实现。
+
+### 许可合规（关键）
+
+Terracotta 是 **AGPL-3.0**，但有明确例外条款：
+
+> 1. 通过打包方式包含本作品未经修改的二进制形式，而没有静态或动态地链接到本作品；或
+> 2. 通过本作品提供的进程间通信接口（如 HTTP API）与未经修改的本作品应用程序进行交互，
+>    且在您的程序用户界面明显处标识了本作品的版权信息。
+
+**我们走第 2 条**：只调 HTTP API，不链接任何代码，界面标注版权。
+因此本项目不会被 AGPL 涵盖。
+
+### 集成方式
+
+| 环节 | 做法 |
+|---|---|
+| 启动 | `terracotta.exe --hmcl <tmpfile>`，从临时文件读端口 |
+| 状态 | 轮询 `GET /state`，500ms 间隔，只处理 index 增大的响应 |
+| 开房 | `GET /state/scanning?player=xxx` |
+| 加入 | `GET /state/guesting?room=xxx&player=xxx` |
+| 复位 | `GET /state/ide` |
+| 退出 | `GET /panic?peaceful=true` |
+
+### 状态映射
+
+| Terracotta | 我们的页面 |
+|---|---|
+| `waiting` | 待机 |
+| `host-scanning` | 提示玩家进入存档并对局域网开放 |
+| `host-starting` | 创建房间中 |
+| `host-ok` | 完成页，展示邀请码 |
+| `guest-connecting` / `guest-starting` | 连接中（带 NAT 难度） |
+| `guest-ok` | 完成页，展示直连地址 |
+| `exception` | 失败页，按异常码翻译成人话 |
+
+**回退设计**：Terracotta 不可用时自动退回原有 EasyTier 实现，
+不让一次组件缺失就把联机功能整个打死。
+
+### 服务端安全加固
+
+| 项 | 问题 | 修复 |
+|---|---|---|
+| 路径穿越 | `readJson`/`writeJson` 直接拼 `$name` | 新增 `safeDataName()`，只允许 `[A-Za-z0-9_-]` |
+| 上传 | 不校验类型与体积 | 限制 1KB~200MB，且必须 `MZ` 开头的 PE 文件 |
+
+**审计结论**：无 `eval`/`exec`/`system` 等危险函数；无 SQL（全 JSON 文件存储）；
+密码用 `password_verify` + bcrypt cost 12；令牌比较用 `hash_equals` 防时序攻击；有登录锁定。
+
+> `CLIENT_API_KEY` 明文在源码中，但它只用于区分客户端与浏览器，不是安全边界。
+
+### 死代码清理
+
+删除 `ModNatCheck.IsGood`、`ModTerracotta.IsReady`、`ModTerracotta.ResetToIdle`。
+同时清掉误提交的 `*_wpftmp.vbproj`（MSBuild XAML 编译临时文件），并加 `.gitignore` 规则。
+
+---
+
+## 十一、关键陷阱备忘
 
 | 陷阱 | 说明 |
 |---|---|
