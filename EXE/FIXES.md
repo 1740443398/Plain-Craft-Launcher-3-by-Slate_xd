@@ -350,6 +350,43 @@ End Sub
 
 ---
 
+### 联机功能修复
+
+**问题**：PCL 开源版把联机写死为不可用。
+
+`PageLinkMain.xaml.vb` 原文：
+
+```vb
+If VersionBranchMain <> "Official" Then
+    Throw New Exception($"$开源版无法联网获取配置。……")
+End If
+```
+
+`ModSecret.vb` 的 `ServerLoader` 也是空的，只打一行日志，`ServerConfig` 永远是 `Nothing`。
+而联机模块（EasyTier）的下载地址、版本号都从 `ServerConfig("Link")` 取，所以整条链路断掉。
+
+**修复**：
+
+1. 服务端新增 `action=link_config`，返回 `Link.EasyTierVersion` / `Downloads` / `MinVersionCode`
+2. `ServerLoader` 改为真正向自建服务端请求并填充 `ServerConfig`
+3. 去掉 `PageLinkMain` 里的开源版限制
+
+**下载源**：EasyTier v2.6.4，三个地址依次尝试
+
+| 顺序 | 地址 |
+|---|---|
+| 1 | GitHub Releases 官方 |
+| 2 | ghfast.top 加速 |
+| 3 | gh-proxy.com 加速 |
+
+`{arch}` 占位符由客户端替换成 `x86_64` / `arm64` / `i686`。
+
+**验证**：接口返回 200，三个字段齐全，`{arch}` 占位符存在。
+
+> **未实测**：实际创建/加入房间需要真实网络环境与 EasyTier 组件，本轮只验证到配置链路。
+
+---
+
 ## 九、关键陷阱备忘
 
 | 陷阱 | 说明 |

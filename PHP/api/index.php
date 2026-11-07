@@ -754,6 +754,27 @@ switch ($action) {
         header('Location: ' . siteBase() . '/#cave', true, 302);
         exit;
 
+    // ---------- 联机配置（客户端引流联机模块下载用） ----------
+    // PCL 开源版把 ServerConfig 写死成"无法联网获取"，这里由自建服务端提供，
+    // 让联机功能真正可用。字段与 PCL 原生 ServerConfig.Link 保持一致。
+    case 'link_config':
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'Link' => [
+                // EasyTier 版本号，客户端用它判断是否需要重新下载
+                'EasyTierVersion' => 264,
+                // 下载地址列表，{arch} 会被替换成 x86_64 / arm64 / i686
+                'Downloads' => [
+                    'https://github.com/EasyTier/EasyTier/releases/download/v2.6.4/easytier-windows-{arch}-v2.6.4.zip',
+                    'https://ghfast.top/https://github.com/EasyTier/EasyTier/releases/download/v2.6.4/easytier-windows-{arch}-v2.6.4.zip',
+                    'https://gh-proxy.com/https://github.com/EasyTier/EasyTier/releases/download/v2.6.4/easytier-windows-{arch}-v2.6.4.zip',
+                ],
+                // 低于这个版本码的客户端不允许联机（留空表示不限制）
+                'MinVersionCode' => 100,
+            ],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        exit;
+
     // ---------- 新功能投票：列表（公开） ----------
     case 'vote_list':
         $list = readJson('ideas', []);

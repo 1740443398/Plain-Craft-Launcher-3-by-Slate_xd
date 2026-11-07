@@ -334,8 +334,34 @@ Friend Module ModSecret
     ''' </summary>
     Public ServerConfig As JObject
 
-    Public ServerLoader As New LoaderTask(Of Integer, Integer)("PCL 配置更新", Sub() Logger.Info("该版本中不包含更新通知功能……"), Priority:=ThreadPriority.BelowNormal) With
+    '开源版原本把这个 Loader 留空，导致 ServerConfig 永远是 Nothing，
+    '联机等依赖服务端配置的功能因此全部不可用。
+    '这里改为从自建服务端拉取，字段与 PCL 原生 ServerConfig 保持一致。
+    Public ServerLoader As New LoaderTask(Of Integer, Integer)("PCL 配置更新", AddressOf LoadServerConfig, Priority:=ThreadPriority.BelowNormal) With
         {.ReloadTimeout = 1000 * 60 * 60} '超时 1 小时
+
+    ''' <summary>
+    ''' 从自建服务端拉取配置。失败时保持 Nothing，调用方自行判断。
+    ''' </summary>
+    Private Sub LoadServerConfig()
+        Try
+            Dim Url As String = $"{ModUpdate.ApiBase}?action=link_config"
+            Dim Raw As String = ModByethost.GetWithChallenge(Url, Timeout:=12000)
+            If String.IsNullOrWhiteSpace(Raw) OrElse ModByethost.IsChallengePage(Raw) Then
+                Logger.Warn("服务端配置无响应，联机等功能可能不可用")
+                Return
+            End If
+            Dim Parsed As JObject = Raw.DeserializeJson()
+            If Parsed Is Nothing Then
+                Logger.Warn("服务端配置解析失败")
+                Return
+            End If
+            ServerConfig = Parsed
+            Logger.Info($"已获取服务端配置，包含：{String.Join("、", Parsed.Properties().Select(Function(p) p.Name))}")
+        Catch ex As Exception
+            Logger.Warn(ex, "获取服务端配置失败")
+        End Try
+    End Sub
 
 #End Region
 
