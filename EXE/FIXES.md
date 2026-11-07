@@ -285,6 +285,39 @@ End Sub
 
 ---
 
+### 模组元数据解析
+
+`Modules/Minecraft/ModMeta.vb`，为依赖检查提供地基。
+
+按加载器分别读取，**不混着解析**：
+
+| 加载器 | 声明文件 |
+|---|---|
+| Fabric | `fabric.mod.json` |
+| Quilt | `quilt.mod.json`（内容在 `quilt_loader` 下） |
+| NeoForge | `META-INF/neoforge.mods.toml` |
+| Forge 1.13+ | `META-INF/mods.toml` |
+| 旧版 Forge | `mcmod.info` |
+
+**设计原则**：读不出来就说读不出来。解析失败一律 `Parsed=False`，
+绝不因为解析不出来就报「缺前置」——那会让玩家无法启动本来正常的游戏。
+
+**踩过的坑**：
+
+- Fabric 的 `depends` 是 `{"modid": ">=1.0"}` 对象，`For Each` 拿到的是 `JProperty`，
+  `ToString()` 会返回 `"key": "value"` 整行而不是值。必须用 `.Properties()` 遍历。
+- 同时要支持 `[{"id": ..., "version": ...}]` 数组写法。
+- VB 里 `"#"c` 会被当成预处理指令，用 `ChrW(35)` 常量绕开。
+- `Using Stream = Entry.Open()` 会让 `Stream` 遮蔽 `System.IO.Stream` 类型，必须换名。
+
+**测试**：`tests\run-modmeta-tests.ps1`，用真实 JAR 样本验证四种加载器。
+
+```
+通过 20，失败 0
+```
+
+---
+
 ## 九、关键陷阱备忘
 
 | 陷阱 | 说明 |

@@ -228,6 +228,7 @@
     <Compile Include="Modules\Resource\ResourceSearcher.vb" />
     <Compile Include="Modules\Minecraft\ModJava.vb" />
     <Compile Include="Modules\Minecraft\ModVersionRange.vb" />
+    <Compile Include="Modules\Minecraft\ModMeta.vb" />
     <Compile Include="Modules\ModRecycleBin.vb" />
     <Compile Include="Modules\ModSaveBackup.vb" />
     <Compile Include="Modules\Resource\LocalResourceLoaders.vb" />
