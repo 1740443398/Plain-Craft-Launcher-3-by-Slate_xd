@@ -30,6 +30,11 @@ Public Class PagePluginHost
                 RenderMessage("没有指定插件")
                 Return
             End If
+            '标题栏显示当前插件，让用户知道自己在哪
+            Try
+                If LabHostTitle IsNot Nothing Then LabHostTitle.Text = "当前插件：" & Target.DisplayName
+            Catch
+            End Try
             If Not Target.IsUsable Then
                 RenderMessage($"这个插件无法加载：{Target.FailureReason}")
                 Return
@@ -92,4 +97,13 @@ Public Class PagePluginHost
         End Try
     End Sub
 
+
+    ''' <summary>返回插件列表页。</summary>
+    Private Sub BtnHostBack_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnHostBack.MouseLeftButtonUp
+        Try
+            FrmMain.PageChange(FormMain.PageType.Plugin)
+        Catch ex As Exception
+            Logger.Warn(ex, "返回插件列表失败")
+        End Try
+    End Sub
 End Class
