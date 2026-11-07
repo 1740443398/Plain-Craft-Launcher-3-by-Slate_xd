@@ -1345,7 +1345,27 @@ Public Class FormMain
             '切换到主页面
             PageChangeExit()
             IsChangingPage = True '防止下面的勾选直接触发了 PageChangeActual
-            CType(PanTitleSelect.Children(Stack), MyRadioButton).SetChecked(True, True, PageNameGet(PageCurrent) = "")
+            '导航栏按钮按 Tag 查找，不能用 PageType 枚举值当索引：
+            'Server=10 / Plugin=11 / LinkLobby=12 已超出 Children 的数量，会抛异常
+            Dim TitleButton As MyRadioButton = Nothing
+            For Each Child In PanTitleSelect.Children
+                Dim Rb = TryCast(Child, MyRadioButton)
+                If Rb IsNot Nothing AndAlso Val(Rb.Tag) = CInt(Stack.Page) Then
+                    TitleButton = Rb
+                    Exit For
+                End If
+            Next
+            If TitleButton Is Nothing Then
+                '没有对应按钮的页面（如联机大厅、开服）：退回「联机」或「更多」入口
+                For Each Child In PanTitleSelect.Children
+                    Dim Rb = TryCast(Child, MyRadioButton)
+                    If Rb IsNot Nothing AndAlso Val(Rb.Tag) = 2 Then
+                        TitleButton = Rb
+                        Exit For
+                    End If
+                Next
+            End If
+            If TitleButton IsNot Nothing Then TitleButton.SetChecked(True, True, PageNameGet(PageCurrent) = "")
             IsChangingPage = False
             Select Case Stack.Page
                 Case PageType.Download
@@ -1374,7 +1394,21 @@ Public Class FormMain
     ''' </summary>
     Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect1.Check, BtnTitleSelect2.Check, BtnTitleSelect3.Check, BtnTitleSelect4.Check, BtnTitleSelect5.Check, BtnTitleSelect6.Check
         If IsChangingPage Then Return
-        PageChangeActual(Val(sender.Tag))
+        '按 Tag 显式映射到 PageType。
+        '不能直接 Val(Tag)：Tag 6 会撞上 PageType.TaskManager(6)，
+        'Tag 5 会撞上 PageType.InstanceSelect(5)，导致点了跳到别的页面。
+        Dim Target As PageType
+        Select Case Val(sender.Tag)
+            Case 0 : Target = PageType.Launch
+            Case 1 : Target = PageType.Download
+            Case 2 : Target = PageType.Link
+            Case 3 : Target = PageType.Setup
+            Case 4 : Target = PageType.Other
+            Case 5 : Target = PageType.Server
+            Case 6 : Target = PageType.Plugin
+            Case Else : Return
+        End Select
+        PageChangeActual(Target)
     End Sub
     ''' <summary>
     ''' 通过点击返回按钮或手动触发返回来改变页面。
@@ -1478,9 +1512,9 @@ Public Class FormMain
                 Case PageType.Server '开服
                     If FrmServerMain Is Nothing Then FrmServerMain = New PageServerMain
                     PageChangeAnim(New MyPageLeft, FrmServerMain)
-                Case PageType.Plugin '插件（复用更多页的插件子页）
-                    If FrmOtherLeft Is Nothing Then FrmOtherLeft = New PageOtherLeft
-                    PageChangeAnim(FrmOtherLeft, FrmOtherLeft.PageGet(FormMain.PageSubType.OtherPlugin))
+                Case PageType.Plugin '插件（独立顶级页面）
+                    If FrmPluginMain Is Nothing Then FrmPluginMain = New PageOtherPlugin
+                    PageChangeAnim(New MyPageLeft, FrmPluginMain)
             End Select
 #End Region
 

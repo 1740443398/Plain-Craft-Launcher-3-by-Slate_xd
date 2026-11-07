@@ -399,6 +399,7 @@ EndHint:
     Public FrmOtherTest As PageOtherTest
     Public FrmOtherPlugin As PageOtherPlugin
     Public FrmServerMain As PageServerMain
+    Public FrmPluginMain As PageOtherPlugin
 Public FrmLinkLobby As PageLinkLobby
 
     '登录页面声明

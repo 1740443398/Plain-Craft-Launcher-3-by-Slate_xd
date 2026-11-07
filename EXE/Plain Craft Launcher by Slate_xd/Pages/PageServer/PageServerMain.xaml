@@ -7,35 +7,58 @@
     PanScroll="Content">
     <StackPanel Margin="0,0,20,20">
 
-        <!-- 概览 -->
-        <local:MyCard Title="服务器" Margin="0,0,0,15">
+        <!-- 本地服务端版本 -->
+        <local:MyCard Title="本地服务端" Margin="0,0,0,15">
             <StackPanel Margin="25,38,25,16">
-                <TextBlock x:Name="LabServerSummary" TextWrapping="Wrap" Text="正在扫描……" />
+                <TextBlock x:Name="LabLocalSummary" TextWrapping="Wrap" Text="正在扫描……" />
                 <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                    <local:MyButton x:Name="BtnServerNew" Text="新建服务器" Height="32" MinWidth="120" />
+                    <local:MyButton x:Name="BtnServerDownloadNew" Text="下载服务端" Height="32" MinWidth="120" />
                     <local:MyButton x:Name="BtnServerRescan" Text="重新扫描" Height="32" MinWidth="100" Margin="10,0,0,0" />
                     <local:MyButton x:Name="BtnServerFolder" Text="打开目录" Height="32" MinWidth="100" Margin="10,0,0,0" />
                 </StackPanel>
                 <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" FontSize="12"
                            Foreground="{DynamicResource ColorBrushGray3}"
-                           Text="开服需要先同意 Minecraft EULA。服务器文件放在 PCL\Servers\服务器名 下，&#xa;启动器只负责组织配置与启动，不会替你下载来路不明的服务端程序。" />
+                           Text="每个服务端版本有独立的目录与世界存档，互不干扰。&#xa;这里只提供官方服务端下载，不会下载客户端。" />
             </StackPanel>
         </local:MyCard>
+
+        <!-- 本地列表 -->
+        <StackPanel x:Name="PanServerList" />
 
         <!-- 空状态 -->
         <local:MyCard x:Name="PanServerEmpty" Margin="0,0,0,15" Visibility="Collapsed">
             <StackPanel Margin="25,38,25,30">
-                <TextBlock Text="还没有服务器" FontSize="15" HorizontalAlignment="Center"
+                <TextBlock Text="还没有安装服务端" FontSize="15" HorizontalAlignment="Center"
                            Foreground="{DynamicResource ColorBrushGray2}" />
                 <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" HorizontalAlignment="Center"
                            TextAlignment="Center" FontSize="12.5"
                            Foreground="{DynamicResource ColorBrushGray3}"
-                           Text="点击「新建服务器」创建一份配置，然后按提示放好服务端 jar 就能开服。" />
+                           Text="点「下载服务端」挑一个版本，或在下方从模板快速创建。" />
             </StackPanel>
         </local:MyCard>
 
-        <!-- 服务器列表 -->
-        <StackPanel x:Name="PanServerList" />
+        <!-- 下载面板（默认隐藏） -->
+        <local:MyCard x:Name="PanDownload" Margin="0,0,0,15" Visibility="Collapsed" Title="下载服务端">
+            <StackPanel Margin="25,38,25,16">
+                <TextBlock x:Name="LabDownloadStatus" TextWrapping="Wrap" Text="正在获取可下载版本……" />
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <local:MyComboBox x:Name="ComboServerVersion" Height="32" MinWidth="260" />
+                    <local:MyButton x:Name="BtnStartDownload" Text="开始下载" Height="32" MinWidth="110" Margin="10,0,0,0" />
+                    <local:MyButton x:Name="BtnCancelDownload" Text="收起" Height="32" MinWidth="90" Margin="10,0,0,0" />
+                </StackPanel>
+                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="12"
+                           Foreground="{DynamicResource ColorBrushGray3}"
+                           Text="只列出官方提供的服务端版本。老版本没有独立服务端，不会出现在这里。" />
+            </StackPanel>
+        </local:MyCard>
+
+        <!-- 预设模板 -->
+        <local:MyCard x:Name="PanTemplates" Margin="0,0,0,15" Title="快速模板">
+            <StackPanel Margin="25,38,25,16">
+                <TextBlock TextWrapping="Wrap" Text="按用途预先把配置调好，创建后仍可修改。" />
+                <StackPanel x:Name="PanTemplateList" Margin="0,12,0,0" />
+            </StackPanel>
+        </local:MyCard>
 
     </StackPanel>
 </local:MyPageRight>
