@@ -35,12 +35,21 @@ const RATE_DAILY_LIMIT  = 10;      // 同一 IP 每日最多提交条数
 const RATE_DUP_WINDOW   = 3600;    // 相同内容判重窗口（秒）
 
 // ==================== 基础 ====================
-// 临时打开错误显示以便诊断
-ini_set('display_errors', '1');
+// 错误处理：生产环境绝不把错误细节返回给客户端（会泄露路径与内部结构），
+// 只写日志；调试时通过 HTTP_X_PCL3_DEBUG 头临时开启。
+ini_set('display_errors', '0');
+ini_set("log_errors", "1");
 error_reporting(E_ALL);
+if (($_SERVER['HTTP_X_PCL3_DEBUG'] ?? '') === '1') {
+    ini_set('display_errors', '1');
+}
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
+// 安全响应头：API 只返回 JSON，不需要 CSP；但应阻止被嵌入与 Referer 泄露
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
+header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 
 /**
  * 推断本站基础地址（协议 + 域名 + 路径）。

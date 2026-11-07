@@ -662,6 +662,72 @@ x86_64: fdfa6105373cee5c2e5f22ea307d3f8ca15bcb1716dddf27e4c3f897b52e933e
 
 ---
 
+### 自用版重建（隔离构建）
+
+**问题**：自改名后自用版从未重新构建，仍是旧名字 `Plain Craft Launcher 3.exe`（11-06 的产物），
+不含本项目的任何新功能。
+
+**隔离构建流程**（主源码的合规标志绝不改动）：
+
+```
+1. robocopy 主源码 → _rea\_personal_src（排除 obj/bin）
+2. 在临时副本里把 AllowAllThemes 改为 True
+3. 编译到 _rea\out_personal
+4. 部署到 PCL-3.0-自用版（旧 exe 保留）
+5. 删除临时副本
+```
+
+**验证**（用反射读编译产物里的常量，两个版本分别用独立进程加载避免缓存）：
+
+| 版本 | AllowAllThemes | 主题数 | 用途 |
+|---|---|---|---|
+| 主版本（发布） | `False` | 3 种蓝色 | 可分发 |
+| 自用版（私有） | `True` | 16 种 | 不发布 |
+
+确认自用版含全部 8 个新模块：`ModRecycleBin` / `ModSaveBackup` / `ModDependencyCheck` /
+`ModVersionRange` / `ModMeta` / `ModNatCheck` / `ModTerracotta` / `ModTarGz`。
+
+**踩坑**：首次翻转标志时用 `String.Replace` 没生效（BOM 处理问题），
+改成逐行替换 `AllowAllThemes As Boolean = False` → `True` 才成功。
+
+### 服务端：生产环境错误显示（严重）
+
+**发现**：`api/index.php` 开头写着
+
+```php
+// 临时打开错误显示以便诊断
+ini_set('display_errors', '1');
+error_reporting(E_ALL);
+```
+
+注释说「临时」，但一直留在了代码里。**生产环境开错误显示会向用户暴露文件路径、
+函数调用栈、内部目录结构**，是典型的信息泄露。
+
+**修复**：
+
+```php
+ini_set('display_errors', '0');
+ini_set("log_errors", "1");
+error_reporting(E_ALL);   // 仍然记录，只是不回显
+if (((['HTTP_X_PCL3_DEBUG'] ?? '') === '1') {
+    ini_set('display_errors', '1');   // 调试时显式开启
+}
+```
+
+### 服务端：安全响应头
+
+| 头 | 作用 |
+|---|---|
+| `X-Frame-Options: DENY` | 禁止被嵌入 iframe（防点击劫持） |
+| `Referrer-Policy: no-referrer` | 不向外部泄露来源页 |
+| `Permissions-Policy` | 禁用地理位置 / 麦克风 / 摄像头 |
+
+未加 CSP——这是纯 JSON API，不渲染 HTML，CSP 不适用。
+
+**验证**：5 个头全部返回，接口正常，响应中无路径泄露。
+
+---
+
 ## 十一、关键陷阱备忘
 
 | 陷阱 | 说明 |
