@@ -98,7 +98,51 @@ Public Class PageLinkMain
     '===============================
 
     '创建
+    ''' <summary>
+    ''' 创建房间前的设置：是否公开到大厅、是否设密码。
+    ''' <para>返回 False 表示玩家取消。</para>
+    ''' </summary>
+    Private Function AskRoomOptions() As Boolean
+        Try
+            Dim PublicChoice As Integer = MyMsgBox(
+                "是否把这个房间公开到联机大厅？" & vbCrLf & vbCrLf &
+                "公开：其他人能在「联机大厅」申请加入。" & vbCrLf &
+                "私密：只有拿到邀请码的人能进。",
+                "创建房间", "公开", "私密")
+            If PublicChoice = 0 Then Return False
+            Dim IsPublic As Boolean = (PublicChoice = 1)
+
+            Dim PwdChoice As Integer = MyMsgBox(
+                "要为这个房间设置密码吗？" & vbCrLf & vbCrLf &
+                "设了密码，拿到邀请码的人还需要输入正确密码才能进。" & vbCrLf &
+                "适合发给不熟的人，或者发在公开群里。",
+                "房间密码", "设置密码", "不设密码")
+            If PwdChoice = 0 Then Return False
+
+            Dim Password As String = ""
+            If PwdChoice = 1 Then
+                Password = MyMsgBoxInput("设置房间密码",
+                    "输入房间密码，进房间的人需要输入同样的密码。" & vbCrLf & ModLinkPassword.RuleHint,
+                    HintText:=$"例如 {ModLinkPassword.GenerateRandom()}")
+                If Password Is Nothing Then Return False
+                If Not ModLinkPassword.IsValid(Password) Then
+                    Hint($"密码长度需要 {ModLinkPassword.MinLength}~{ModLinkPassword.MaxLength} 个字符", HintType.Red)
+                    Return False
+                End If
+            End If
+
+            ModLinkPassword.CreateRoom(Password, IsPublic, "房主")
+            Return True
+        Catch ex As Exception
+            Logger.Error(ex, "创建房间设置失败")
+            Hint($"创建房间失败：{ex.Message}", HintType.Red)
+            Return False
+        End Try
+    End Function
+
     Private Sub Create_MouseLeftButtonUp() Handles PanSelectCreate.MouseLeftButtonUp
+        '先让玩家决定公开性与密码
+        If Not AskRoomOptions() Then Return
         '优先走 Terracotta：它会自动扫描本机 Minecraft 端口，不需要玩家手动填
         If FileUtils.Exists(TerracottaExe) Then
             If TryStartHostWithTerracotta() Then

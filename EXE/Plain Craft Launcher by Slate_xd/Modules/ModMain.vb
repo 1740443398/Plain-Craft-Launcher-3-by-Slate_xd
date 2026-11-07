@@ -398,6 +398,7 @@ EndHint:
     Public FrmOtherAbout As PageOtherAbout
     Public FrmOtherTest As PageOtherTest
     Public FrmOtherPlugin As PageOtherPlugin
+    Public FrmServerMain As PageServerMain
 
     '登录页面声明
     Public FrmLoginLegacy As PageLoginLegacy

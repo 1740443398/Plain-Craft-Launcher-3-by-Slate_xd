@@ -120,6 +120,12 @@ RetryCacheCheck:
             If Environment.OSVersion.Version < New Version(6, 2) Then 'Windows 7 回退（#8519）
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 Or SecurityProtocolType.Tls Or SecurityProtocolType.Tls11 Or SecurityProtocolType.Tls12
             End If
+            '启动本地 API（只监听回环，失败不影响正常使用）
+            Try
+                ModApiServer.Start()
+            Catch ex As Exception
+                Logger.Warn(ex, "启动本地 API 失败")
+            End Try
             '设置初始窗口
             If Settings.Get(Of Boolean)("UiLauncherLogo") Then
                 FrmStart = New SplashScreen("Images\icon.ico")

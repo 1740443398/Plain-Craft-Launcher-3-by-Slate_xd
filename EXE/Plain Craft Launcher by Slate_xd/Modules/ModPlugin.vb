@@ -155,8 +155,13 @@ Public Module ModPlugin
                         Continue For
                     End If
 
-                    '用户开关
-                    Entry.Enabled = Settings.Get(Of Boolean)($"PluginEnabled.{M.Id}")
+                    '用户开关：动态键可能尚未注册，Settings.Get 会抛 KeyNotFoundException，
+                    '不能让它把整个插件判为不可用
+                    Try
+                        Entry.Enabled = Settings.Get(Of Boolean)($"PluginEnabled.{M.Id}")
+                    Catch
+                        Entry.Enabled = True '默认启用
+                    End Try
                     Plugins.Add(Entry)
                 Catch ex As Exception
                     Logger.Warn(ex, $"扫描插件目录失败：{SubDir}")
@@ -185,7 +190,11 @@ Public Module ModPlugin
         Try
             If Entry Is Nothing OrElse Entry.Manifest Is Nothing Then Return
             Entry.Enabled = Enabled
-            Settings.Set($"PluginEnabled.{Entry.Manifest.Id}", Enabled)
+            Try
+                Settings.Set($"PluginEnabled.{Entry.Manifest.Id}", Enabled)
+            Catch ex As Exception
+                Logger.Warn(ex, $"保存插件开关失败：{Entry.DisplayName}")
+            End Try
             Logger.Info($"插件 {Entry.DisplayName} 已{(If(Enabled, "启用", "禁用"))}")
         Catch ex As Exception
             Logger.Warn(ex, "设置插件开关失败")

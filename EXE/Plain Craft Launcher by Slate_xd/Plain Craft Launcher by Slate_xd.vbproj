@@ -161,6 +161,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Configuration" />
+  <Reference Include="Microsoft.JScript" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.IO.Compression" />
@@ -235,6 +236,10 @@
     <Compile Include="Modules\ModTerracotta.vb" />
     <Compile Include="Modules\ModTarGz.vb" />
     <Compile Include="Modules\ModPlugin.vb" />
+    <Compile Include="Modules\ModPluginScript.vb" />
+    <Compile Include="Modules\ModLinkPassword.vb" />
+    <Compile Include="Modules\ModServer.vb" />
+    <Compile Include="Modules\ModApiServer.vb" />
     <Compile Include="Modules\ModSaveBackup.vb" />
     <Compile Include="Modules\Resource\LocalResourceLoaders.vb" />
     <Compile Include="Modules\Minecraft\ModModpack.vb" />
@@ -380,6 +385,9 @@
     </Compile>
     <Compile Include="Pages\PageOther\PageOtherAbout.xaml.vb">
       <DependentUpon>PageOtherAbout.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\PageServer\PageServerMain.xaml.vb">
+      <DependentUpon>PageServerMain.xaml</DependentUpon>
     </Compile>
     <Compile Include="Pages\PageOther\PageOtherPlugin.xaml.vb">
       <DependentUpon>PageOtherPlugin.xaml</DependentUpon>
@@ -631,6 +639,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Pages\PageOther\PageOtherAbout.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Pages\PageServer\PageServerMain.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

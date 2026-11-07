@@ -1,0 +1,41 @@
+﻿<local:MyPageRight
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:PCL" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d" x:Class="PageServerMain"
+    PanScroll="Content">
+    <StackPanel Margin="0,0,20,20">
+
+        <!-- 概览 -->
+        <local:MyCard Title="服务器" Margin="0,0,0,15">
+            <StackPanel Margin="25,38,25,16">
+                <TextBlock x:Name="LabServerSummary" TextWrapping="Wrap" Text="正在扫描……" />
+                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                    <local:MyButton x:Name="BtnServerNew" Text="新建服务器" Height="32" MinWidth="120" />
+                    <local:MyButton x:Name="BtnServerRescan" Text="重新扫描" Height="32" MinWidth="100" Margin="10,0,0,0" />
+                    <local:MyButton x:Name="BtnServerFolder" Text="打开目录" Height="32" MinWidth="100" Margin="10,0,0,0" />
+                </StackPanel>
+                <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" FontSize="12"
+                           Foreground="{DynamicResource ColorBrushGray3}"
+                           Text="开服需要先同意 Minecraft EULA。服务器文件放在 PCL\Servers\服务器名 下，&#xa;启动器只负责组织配置与启动，不会替你下载来路不明的服务端程序。" />
+            </StackPanel>
+        </local:MyCard>
+
+        <!-- 空状态 -->
+        <local:MyCard x:Name="PanServerEmpty" Margin="0,0,0,15" Visibility="Collapsed">
+            <StackPanel Margin="25,38,25,30">
+                <TextBlock Text="还没有服务器" FontSize="15" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource ColorBrushGray2}" />
+                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" HorizontalAlignment="Center"
+                           TextAlignment="Center" FontSize="12.5"
+                           Foreground="{DynamicResource ColorBrushGray3}"
+                           Text="点击「新建服务器」创建一份配置，然后按提示放好服务端 jar 就能开服。" />
+            </StackPanel>
+        </local:MyCard>
+
+        <!-- 服务器列表 -->
+        <StackPanel x:Name="PanServerList" />
+
+    </StackPanel>
+</local:MyPageRight>
