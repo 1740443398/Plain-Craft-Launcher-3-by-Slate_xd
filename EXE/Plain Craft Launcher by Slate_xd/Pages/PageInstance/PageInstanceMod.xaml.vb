@@ -740,6 +740,69 @@ Install:
         DeleteMods(LocalResourceLoader.Output.Where(Function(m) SelectedMods.Contains(m.EnabledName)))
         ChangeAllSelected(False)
     End Sub
+    ''' <summary>
+    ''' SPT · 可撤销：打开回收站，列出已删除的 Mod，支持还原或彻底删除。
+    ''' <para>
+    ''' 交互分两步：先选条目（单选列表），再选动作（还原 / 彻底删除）。
+    ''' 两步都可取消，取消不产生任何副作用。
+    ''' </para>
+    ''' </summary>
+    Private Sub BtnManageRecycle_Click() Handles BtnManageRecycle.Click
+        OpenRecycleBin()
+    End Sub
+
+    Public Sub OpenRecycleBin()
+        Try
+            If McInstanceSelected Is Nothing Then
+                Hint("请先选择一个版本", HintType.Blue)
+                Return
+            End If
+            Dim Entries = ModRecycleBin.ListEntries(McInstanceSelected)
+            If Entries.Count = 0 Then
+                Hint("回收站是空的", HintType.Blue)
+                Return
+            End If
+            '按删除时间倒序，最近的在前
+            Entries = Entries.OrderByDescending(Function(e) e.DeletedTime).ToList()
+
+            '第一步：选条目
+            Dim Radios As New List(Of IMyRadio)
+            For Each Entry In Entries
+                Radios.Add(New MyRadioBox With {.Text = Entry.DisplayText})
+            Next
+            Dim Picked = MyMsgBoxSelect(Radios, $"回收站（{Entries.Count} 项）", "下一步", "取消")
+            If Picked Is Nothing Then Return
+            Dim Target = Entries(Picked.Value)
+
+            '第二步：选动作
+            Dim Actions As New List(Of IMyRadio) From {
+                New MyRadioBox With {.Text = "还原到原位置", .Checked = True},
+                New MyRadioBox With {.Text = "彻底删除（不可恢复）"}
+            }
+            Dim Act = MyMsgBoxSelect(Actions, Target.OriginalName, "确定", "取消")
+            If Act Is Nothing Then Return
+
+            If Act.Value = 0 Then
+                If ModRecycleBin.Restore(McInstanceSelected, Target) Then
+                    Hint($"已还原 {Target.OriginalName}", HintType.Green)
+                    ReloadModList(True)
+                Else
+                    Hint("还原失败，目标位置可能已有同名文件", HintType.Red)
+                End If
+            Else
+                If MyMsgBox($"确定要彻底删除 {Target.OriginalName} 吗？此操作不可恢复。", "彻底删除", "删除", "取消", IsWarn:=True) <> 1 Then Return
+                If ModRecycleBin.DeletePermanently(McInstanceSelected, Target) Then
+                    Hint($"已彻底删除 {Target.OriginalName}", HintType.Green)
+                Else
+                    Hint("删除失败", HintType.Red)
+                End If
+            End If
+        Catch ex As Exception
+            Logger.Error(ex, "打开回收站失败")
+            Hint($"打开失败：{ex.Message}", HintType.Red)
+        End Try
+    End Sub
+
     Private Sub DeleteMods(ModsToDelete As IEnumerable(Of LocalResourceFile))
         Try
             Dim IsSuccessful As Boolean = True
@@ -753,11 +816,25 @@ Install:
                     Return {Target.File.FullName, Target.EnabledFullName}
                 End If
             End Function).Distinct.Where(Function(m) FileUtils.Exists(m)).Select(Function(m) New LocalResourceFile(m)).ToList()
+            'SPT · 可撤销：不按 Shift 时先把文件移进启动器自己的回收站，
+            '这样玩家能在 Mod 管理页找回来，而不是去系统回收站里翻被改过名的文件。
+            If Not IsShiftPressed AndAlso McInstanceSelected IsNot Nothing Then
+                Try
+                    Dim Moved = ModRecycleBin.MoveToRecycle(McInstanceSelected, ModList.Select(Function(m) m.File.FullName))
+                    If Moved > 0 Then Logger.Info($"已移入回收站 {Moved} 个文件")
+                Catch ex As Exception
+                    Logger.Warn(ex, "移入回收站失败，回退到系统删除")
+                End Try
+            End If
             '实际删除文件
             For Each ModEntity In ModList
                 '删除
                 Try
-                    FileUtils.Delete(ModEntity.File.FullName, Not IsShiftPressed)
+                    If Not IsShiftPressed AndAlso Not FileUtils.Exists(ModEntity.File.FullName) Then
+                        '已经移进回收站，跳过系统删除
+                    Else
+                        FileUtils.Delete(ModEntity.File.FullName, Not IsShiftPressed)
+                    End If
                 Catch ex As OperationCanceledException
                     Logger.Warn(ex, "删除 Mod 被主动取消")
                     ReloadModList(True)
