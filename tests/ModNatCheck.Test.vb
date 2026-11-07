@@ -9,7 +9,6 @@ Module NatTest
         Console.WriteLine("耗时: " & sw.ElapsedMilliseconds.ToString() & " ms")
         Console.WriteLine("类型: " & r.Type.ToString())
         Console.WriteLine("公网地址: " & If(r.PublicEndpoint = "", "(无)", r.PublicEndpoint))
-        Console.WriteLine("适合联机: " & r.IsGood.ToString())
         Console.WriteLine("说明: " & r.Detail)
         Console.WriteLine("")
         If r.Type = ModNatCheck.NatType.Unknown OrElse r.Type = ModNatCheck.NatType.UnsupportedServer Then
