@@ -231,6 +231,7 @@
     <Compile Include="Modules\Minecraft\ModMeta.vb" />
     <Compile Include="Modules\Minecraft\ModDependencyCheck.vb" />
     <Compile Include="Modules\ModRecycleBin.vb" />
+    <Compile Include="Modules\ModNatCheck.vb" />
     <Compile Include="Modules\ModSaveBackup.vb" />
     <Compile Include="Modules\Resource\LocalResourceLoaders.vb" />
     <Compile Include="Modules\Minecraft\ModModpack.vb" />

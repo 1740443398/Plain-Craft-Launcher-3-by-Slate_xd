@@ -62,6 +62,12 @@ Public Class PageLinkMain
 
     '页面动画兼容
     Private Sub UpdatePanelVisibility() Handles Me.PageEnter
+        '进入联机页时检测一次网络环境（不阻塞 UI）
+        Try
+            StartNatCheck()
+        Catch ex As Exception
+            Logger.Warn(ex, "触发 NAT 检测失败")
+        End Try
         FrmLinkMain.PanSelect.Visibility = If(LinkState = LinkStates.Waiting, Visibility.Visible, Visibility.Collapsed)
         FrmLinkMain.PanFinish.Visibility = If(LinkState = LinkStates.Finished, Visibility.Visible, Visibility.Collapsed)
     End Sub
@@ -1111,5 +1117,69 @@ ForcedPass:
     End Sub
 
 #End Region
+
+
+    ''' <summary>
+    ''' SPT · 任务反馈：进入联机页时在后台检测 NAT 类型，结果显示在创建房间上方。
+    ''' <para>
+    ''' 联机失败最常见的原因就是网络环境（对称 NAT、UDP 被封）。
+    ''' 提前告知比让玩家点了按钮等半分钟再报错更有用。
+    ''' </para>
+    ''' </summary>
+    Private NatChecking As Boolean = False
+
+    Private Sub StartNatCheck()
+        If NatChecking Then Return
+        NatChecking = True
+        Try
+            RunInUi(
+            Sub()
+                Try
+                    LabNatType.Text = "正在检测网络环境……"
+                    BtnNatRetry.Visibility = Visibility.Collapsed
+                Catch
+                End Try
+            End Sub)
+            RunInThread(
+            Sub()
+                Dim Result As ModNatCheck.NatResult = Nothing
+                Try
+                    Result = ModNatCheck.Detect()
+                Catch ex As Exception
+                    Logger.Warn(ex, "NAT 检测失败")
+                End Try
+                RunInUi(
+                Sub()
+                    Try
+                        If Result Is Nothing Then
+                            LabNatType.Text = "网络环境检测失败，不影响正常使用"
+                            BtnNatRetry.Visibility = Visibility.Visible
+                            Return
+                        End If
+                        LabNatType.Text = Result.Detail
+                        '只有结果不确定时才给重试入口，确定的结论重试也没意义
+                        If Result.Type = ModNatCheck.NatType.Unknown OrElse
+                           Result.Type = ModNatCheck.NatType.UnsupportedServer Then
+                            BtnNatRetry.Visibility = Visibility.Visible
+                        Else
+                            BtnNatRetry.Visibility = Visibility.Collapsed
+                        End If
+                    Catch ex As Exception
+                        Logger.Warn(ex, "显示 NAT 检测结果失败")
+                    Finally
+                        NatChecking = False
+                    End Try
+                End Sub)
+            End Sub)
+        Catch ex As Exception
+            NatChecking = False
+            Logger.Warn(ex, "启动 NAT 检测失败")
+        End Try
+    End Sub
+
+    Private Sub BtnNatRetry_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnNatRetry.MouseLeftButtonUp
+        e.Handled = True
+        StartNatCheck()
+    End Sub
 
 End Class

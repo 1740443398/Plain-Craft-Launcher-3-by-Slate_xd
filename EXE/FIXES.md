@@ -418,6 +418,39 @@ End If
 
 ---
 
+### NAT 类型检测（借鉴 LauncherX）
+
+从 LauncherX 的 `zh_cn.axaml` 语言包里整理出它的功能清单（1482 条文案），
+其中**NAT 类型检测**对刚修好的联机功能最有价值。
+
+**为什么需要**：联机失败最常见的原因就是网络环境（对称 NAT、UDP 被封）。
+与其让玩家点「创建房间」等半分钟再报错，不如进页面就告诉他原因。
+
+**实现**：`Modules/ModNatCheck.vb`，纯 STUN 协议（RFC 5389），无外部依赖。
+
+1. 向 STUN 服务器发 Binding 请求，拿到它看到的公网地址
+2. 换服务器再问一次，比对映射端口
+3. 端口变了 → 对称 NAT；端口一致 → 锥形；与本地相同 → 公网 IP
+
+支持识别的类型：`OpenInternet` / `FullCone` / `RestrictedCone` /
+`PortRestrictedCone` / `Symmetric` / `UdpBlocked` / `UnsupportedServer`。
+
+**实测结果**（本机）：
+
+```
+耗时: 3533 ms
+类型: Symmetric
+公网地址: 120.243.158.237:11434
+说明: 当前 NAT 类型为：对称 NAT。P2P 打洞有一定几率失败
+```
+
+**设计原则**：检测失败一律返回 `UnsupportedServer` 或 `Unknown`，**绝不猜测**——
+误报「你的网络不行」会让玩家放弃本来能用的功能。只有不确定时才显示「重新检测」。
+
+**UI**：联机页「创建房间」上方一行状态文字，进页面时后台检测，不阻塞界面。
+
+---
+
 ## 十、关键陷阱备忘
 
 | 陷阱 | 说明 |

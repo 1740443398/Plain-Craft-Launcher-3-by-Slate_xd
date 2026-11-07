@@ -68,6 +68,15 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="1*" />
                 </Grid.RowDefinitions>
+                <!-- SPT · 状态可见：联机前先告诉玩家网络能不能用，避免等到失败才发现 -->
+                <StackPanel x:Name="PanNatStatus" Grid.Column="1" Grid.Row="0" VerticalAlignment="Bottom"
+                            HorizontalAlignment="Center" Orientation="Horizontal" Margin="0,0,0,12">
+                    <TextBlock x:Name="LabNatType" FontSize="13" Foreground="{StaticResource ColorBrushGray3}"
+                               VerticalAlignment="Center" Text="正在检测网络环境……" />
+                    <TextBlock x:Name="BtnNatRetry" FontSize="13" Margin="10,0,0,0" VerticalAlignment="Center"
+                               Cursor="Hand" Text="重新检测" Visibility="Collapsed"
+                               Foreground="{DynamicResource ColorBrush3}" TextDecorations="Underline" />
+                </StackPanel>
                 <local:MyCard x:Name="PanSelectCreate" Grid.Column="1" Grid.Row="1" CornerRadius="13" VerticalAlignment="Center">
                     <Grid IsHitTestVisible="False">
                         <Grid.ColumnDefinitions>
