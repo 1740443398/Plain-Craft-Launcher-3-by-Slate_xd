@@ -320,8 +320,32 @@ Friend Module ModSecret
     ''' 确保 PathTemp/Latest.exe 是最新正式版的 PCL，它会被用于整合包打包。
     ''' 如果不是，则下载一个。
     ''' </summary>
+    ''' <summary>
+    ''' 确保 PathTemp/Latest.exe 是最新正式版，它会被用于整合包打包。
+    ''' <para>
+    ''' 开源版原本这里是空的，导致「导出整合包时附带启动器」这个功能直接失效
+    ''' （复制 Latest.exe 时找不到文件）。这里改为从自建服务端下载当前版本。
+    ''' </para>
+    ''' </summary>
     Friend Sub DownloadLatestPCL(Optional LoaderToSyncProgress As LoaderBase = Nothing)
-        '注意：如果要自行实现这个功能，请换用另一个文件路径，以免与官方版本冲突
+        Dim Target As String = PathTemp & "Latest.exe"
+        '已有就直接用，避免重复下载
+        If FileUtils.Exists(Target) AndAlso New FileInfo(Target).Length > 1024 * 1024 Then
+            Logger.Info("已存在可用的 Latest.exe，跳过下载")
+            Return
+        End If
+
+        DirectoryUtils.Create(PathTemp)
+        Dim Version As String = ModBase.VersionBaseName
+        Dim Urls As New List(Of String) From {
+            $"{ModUpdate.ApiBase}?action=download&version={Version}",
+            $"{ModUpdate.ApiBase}?action=download&version={Version}&mirror=1"
+        }
+        Logger.Info($"下载最新版 PCL 到 {Target}")
+        'NetDownloadByLoader 自带多源回退与进度同步
+        NetDownloadByLoader(Urls, Target, LoaderToSyncProgress, New FileChecker With {.MinSize = 1024 * 1024})
+        If Not FileUtils.Exists(Target) Then Throw New Exception("下载后文件不存在")
+        Logger.Info($"最新版 PCL 已就绪：{StringUtils.FormatByteSize(New FileInfo(Target).Length)}")
     End Sub
 
 #End Region

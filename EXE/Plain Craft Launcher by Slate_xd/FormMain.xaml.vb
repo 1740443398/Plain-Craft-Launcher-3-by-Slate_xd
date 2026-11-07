@@ -1216,6 +1216,7 @@ Public Class FormMain
         OtherHelp = 0
         OtherAbout = 1
         OtherTest = 2
+        OtherPlugin = 3
         InstanceOverall = 0
         InstanceSetup = 1
         InstanceMod = 2

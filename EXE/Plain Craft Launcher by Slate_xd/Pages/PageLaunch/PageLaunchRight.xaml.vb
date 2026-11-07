@@ -5,7 +5,9 @@ Public Class PageLaunchRight
 
     Private Sub Init() Handles Me.Loaded
         PanBack.ScrollToHome()
+        '调试模式下日志卡片可见但默认折叠（IsSwapped），避免把主页内容挤走
         PanLog.Visibility = ModeDebug.ToVisibility
+        If ModeDebug Then PanLog.IsSwapped = True
         '快照版提示
         PanHint.Visibility =
             (BuildType <> BuildTypes.Release AndAlso VersionBranchMain = "Official" AndAlso
@@ -720,5 +722,25 @@ Public Class PageLaunchRight
     End Sub
 
 #End Region
+
+
+    ''' <summary>
+    ''' 主页预设变更时刷新主页。
+    ''' <para>
+    ''' 原本 UiCustomPreset 没有 OnChanged 回调，玩家在下拉框里换预设后主页毫无反应，
+    ''' 必须手动点「刷新主页」才生效 —— 这属于交互断裂，不是预期行为。
+    ''' </para>
+    ''' </summary>
+    Public Shared Sub OnPresetChanged()
+        Try
+            '只有当前来源是「预设」时才需要刷新，其它来源不受预设影响
+            If Settings.Get(Of Integer)("UiCustomType") <> 3 Then Return
+            If FrmLaunchRight Is Nothing Then Return
+            FrmLaunchRight.ForceRefresh()
+            Logger.Info("主页预设已切换，正在刷新")
+        Catch ex As Exception
+            Logger.Warn(ex, "切换主页预设后刷新失败")
+        End Try
+    End Sub
 
 End Class

@@ -340,8 +340,97 @@
             ModMain.Hint($"内存优化完成，已经优化到了最佳状态，目前剩余内存 {Remain}！")
         End If
     End Sub
+    ''' <summary>
+    ''' 垃圾清理：清掉启动器自己产生的临时文件与缓存，不动玩家的任何游戏数据。
+    ''' <para>
+    ''' 开源版原本这里是占位提示，功能直接缺失。这里实现为「只清启动器自己的东西」：
+    ''' 临时目录、缓存、旧日志。<b>绝不触碰</b> versions / saves / mods 等玩家数据。
+    ''' </para>
+    ''' </summary>
     Public Shared Sub RubbishClear()
-        Hint("为便于维护，开源内容中不包含百宝箱功能……")
+        RunInThread(
+        Sub()
+            Try
+                Dim Targets As New List(Of Tuple(Of String, String))
+                If DirectoryUtils.Exists(PathTemp) Then Targets.Add(Tuple.Create(PathTemp, "临时文件"))
+                Dim CacheDir = Paths.Base & "PCL\Cache\"
+                If DirectoryUtils.Exists(CacheDir) Then Targets.Add(Tuple.Create(CacheDir, "缓存文件"))
+                Dim LogDir = Paths.Base & "PCL\"
+                If DirectoryUtils.Exists(LogDir) Then
+                    For Each F In Directory.GetFiles(LogDir, "Log*.txt")
+                        If PathUtils.GetLastPart(F) <> "Log1.txt" Then Targets.Add(Tuple.Create(F, "旧日志"))
+                    Next
+                End If
+
+                Dim TotalSize As Long = 0
+                Dim Details As New List(Of String)
+                For Each Item In Targets
+                    Try
+                        Dim Size As Long = 0
+                        If DirectoryUtils.Exists(Item.Item1) Then
+                            Size = New DirectoryInfo(Item.Item1).EnumerateFiles("*", SearchOption.AllDirectories).Sum(Function(x) x.Length)
+                        ElseIf FileUtils.Exists(Item.Item1) Then
+                            Size = New FileInfo(Item.Item1).Length
+                        End If
+                        If Size > 0 Then
+                            TotalSize += Size
+                            Details.Add($"  {Item.Item2}：{StringUtils.FormatByteSize(Size)}")
+                        End If
+                    Catch ex As Exception
+                        Logger.Warn(ex, $"统计 {Item.Item1} 大小失败")
+                    End Try
+                Next
+
+                If TotalSize = 0 Then
+                    RunInUi(Sub() Hint("没有可清理的垃圾文件，已经很干净了", HintType.Green))
+                    Return
+                End If
+
+                Dim Confirm As Integer = 0
+                RunInUi(
+                Sub()
+                    Confirm = MyMsgBox("将清理以下内容（不会动你的存档、模组与版本）：" & vbCrLf & vbCrLf &
+                                       String.Join(vbCrLf, Details) & vbCrLf & vbCrLf &
+                                       $"合计 {StringUtils.FormatByteSize(TotalSize)}，确定继续吗？" ,
+                                       "垃圾清理", "清理", "取消")
+                End Sub)
+                If Confirm <> 1 Then Return
+
+                Dim FailCount As Integer = 0
+                For Each Item In Targets
+                    Try
+                        If DirectoryUtils.Exists(Item.Item1) Then
+                            For Each SubItem In Directory.GetFileSystemEntries(Item.Item1)
+                                Try
+                                    If Directory.Exists(SubItem) Then Directory.Delete(SubItem, True) Else File.Delete(SubItem)
+                                Catch ex As Exception
+                                    FailCount += 1
+                                    Logger.Warn(ex, $"删除失败：{SubItem}")
+                                End Try
+                            Next
+                        ElseIf FileUtils.Exists(Item.Item1) Then
+                            FileUtils.Delete(Item.Item1, True)
+                        End If
+                    Catch ex As Exception
+                        FailCount += 1
+                        Logger.Warn(ex, $"清理失败：{Item.Item1}")
+                    End Try
+                Next
+
+                Logger.Info($"垃圾清理完成，释放 {StringUtils.FormatByteSize(TotalSize)}，失败 {FailCount} 项")
+                RunInUi(
+                Sub()
+                    If FailCount = 0 Then
+                        Hint($"清理完成，释放了 {StringUtils.FormatByteSize(TotalSize)}", HintType.Green)
+                    Else
+                        Hint($"清理完成，释放 {StringUtils.FormatByteSize(TotalSize)}，{FailCount} 项被占用未能删除", HintType.Blue)
+                    End If
+                End Sub)
+            Catch ex As Exception
+                Logger.Error(ex, "垃圾清理失败")
+                RunInUi(Sub() Hint($"清理失败：{ex.Message}", HintType.Red))
+            End Try
+        End Sub)
     End Sub
     ''' <summary>
 ''' 执行内存优化的实际系统调用。需要管理员权限。

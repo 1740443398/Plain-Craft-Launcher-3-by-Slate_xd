@@ -80,20 +80,20 @@
                     <local:MyListItem Title="EasyTier" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="提供了联机模块！" Grid.Row="3" Grid.Column="1" />
                     <local:MyButton Text="GitHub 页面" Grid.Row="3" Grid.Column="2" Height="35" local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://github.com/EasyTier/EasyTier" />
                     <local:MyListItem Title="重庆大学开源软件镜像站" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="提供了 PCL 启动器及 Minecraft 部分开源项目的镜像分发！" Grid.Row="4" Grid.Column="1" />
-                    <local:MyButton Text="打开镜像站" Grid.Row="4" Grid.Column="2" Height="35" local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://mirrors.cqu.edu.cn/" />
-                    <local:MyListItem Title="00ll00" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="提供了 Java Launch Wrapper 和一些重要服务支持！" Grid.Row="5" Grid.Column="1" />
-                    <local:MyListItem Title="Patrick" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="设计并制作了 PCL 图标，让我从做图标的水深火热中得到了解脱……" Grid.Row="6" Grid.Column="1" />
-                    <local:MyListItem Title="Hao_Tian" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="在内测中找出了一大堆没人想得到的诡异 Bug，有非同寻常的 Bug 体质" Grid.Row="7" Grid.Column="1" />
-                    <local:MyListItem Title="Minecraft 中文论坛" Margin="-5,0,15,0" IsHitTestVisible="False" Info="虽然已经关站了，但感谢此前提供了 MCBBS 镜像源……" Grid.Row="8" Grid.Column="1" />
-                    <local:MyListItem Title="PCL 内群的各位" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="感谢内群的沙雕网友们这么久以来对我和 PCL 的支持与鼓励！" Grid.Row="9" Grid.Column="1" />
-                    <local:MyListItem Title="SCL 内群的各位" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="感谢 SCL 内群的各位对 Plain Craft Launcher by Slate_xd 的支持与帮助！" Grid.Row="10" Grid.Column="1" />
-                    <local:MyListItem Title="零核智能转储镜像" Margin="-5,0,15,0" IsHitTestVisible="False" Info="ZCSM（ZeroCore Smart Mirror）由等离子工作室维护，为 NeoForge、Forge、Fabric、Quilt 等模组加载器提供镜像加速！" Grid.Row="11" Grid.Column="1" />
-                    <local:MyButton Text="打开镜像站" Grid.Row="11" Grid.Column="2" Height="35" local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://mirror.zcswo.cn/" />
-                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/ZCSM.png" Grid.Row="11" Margin="3">
+                    <local:MyListItem Title="零核智能转储镜像" Margin="-5,0,15,0" IsHitTestVisible="False" Info="ZCSM（ZeroCore Smart Mirror）由等离子工作室维护，为 NeoForge、Forge、Fabric、Quilt 等模组加载器提供镜像加速！" Grid.Row="5" Grid.Column="1" />
+                    <local:MyButton Text="打开镜像站" Grid.Row="5" Grid.Column="2" Height="35" local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://mirror.zcswo.cn/" />
+                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/ZCSM.png" Grid.Row="5" Margin="3">
                         <Image.Clip>
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
                         </Image.Clip>
                     </Image>
+                    <local:MyButton Text="打开镜像站" Grid.Row="4" Grid.Column="2" Height="35" local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://mirrors.cqu.edu.cn/" />
+                    <local:MyListItem Title="00ll00" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="提供了 Java Launch Wrapper 和一些重要服务支持！" Grid.Row="6" Grid.Column="1" />
+                    <local:MyListItem Title="Patrick" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="设计并制作了 PCL 图标，让我从做图标的水深火热中得到了解脱……" Grid.Row="7" Grid.Column="1" />
+                    <local:MyListItem Title="Hao_Tian" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="在内测中找出了一大堆没人想得到的诡异 Bug，有非同寻常的 Bug 体质" Grid.Row="8" Grid.Column="1" />
+                    <local:MyListItem Title="Minecraft 中文论坛" Margin="-5,0,15,0" IsHitTestVisible="False" Info="虽然已经关站了，但感谢此前提供了 MCBBS 镜像源……" Grid.Row="9" Grid.Column="1" />
+                    <local:MyListItem Title="PCL 内群的各位" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="感谢内群的沙雕网友们这么久以来对我和 PCL 的支持与鼓励！" Grid.Row="10" Grid.Column="1" />
+                    <local:MyListItem Title="SCL 内群的各位" Margin="-5,0,0,0" IsHitTestVisible="False" Grid.ColumnSpan="2" Info="感谢 SCL 内群的各位对 Plain Craft Launcher by Slate_xd 的支持与帮助！" Grid.Row="11" Grid.Column="1" />
                     <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/bangbang93.png" Grid.Row="0" Margin="3">
                         <Image.Clip>
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
@@ -119,27 +119,32 @@
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
                         </Image.Clip>
                     </Image>
-                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/00ll00.png" Grid.Row="5" Margin="3">
+                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/ZCSM.png" Grid.Row="5" Margin="3">
                         <Image.Clip>
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
                         </Image.Clip>
                     </Image>
-                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/Patrick.png" Grid.Row="6" Margin="3">
+                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/00ll00.png" Grid.Row="6" Margin="3">
                         <Image.Clip>
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
                         </Image.Clip>
                     </Image>
-                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/Hao_Tian.jpg" Grid.Row="7" Margin="3">
+                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/Patrick.png" Grid.Row="7" Margin="3">
                         <Image.Clip>
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
                         </Image.Clip>
                     </Image>
-                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/MCBBS.png" Grid.Row="8" Margin="3">
+                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/Hao_Tian.jpg" Grid.Row="8" Margin="3">
                         <Image.Clip>
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
                         </Image.Clip>
                     </Image>
-                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/PCL2.png" Grid.Row="9" Margin="3">
+                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/MCBBS.png" Grid.Row="9" Margin="3">
+                        <Image.Clip>
+                            <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
+                        </Image.Clip>
+                    </Image>
+                    <Image Source="/Plain Craft Launcher by Slate_xd;component/Images/Heads/PCL2.png" Grid.Row="10" Margin="3">
                         <Image.Clip>
                             <EllipseGeometry Center="17 17" RadiusX="17" RadiusY="17" />
                         </Image.Clip>
@@ -250,27 +255,27 @@
 
                     <TextBlock Grid.Row="4" Grid.Column="0" Text="Newtonsoft.Json" TextWrapping="Wrap" FontWeight="Bold" />
                     <TextBlock Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2" Text="Copyright © 2007 James Newton-King&#xa;Licensed under the MIT License." TextWrapping="Wrap" />
-                    <local:MyButton Grid.Row="5" Grid.Column="2" MinWidth="140" Text="查看来源网站" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
+                    <local:MyButton Grid.Row="6" Grid.Column="2" MinWidth="140" Text="查看来源网站" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
                                     local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://www.newtonsoft.com/json" />
-                    <local:MyButton Grid.Row="5" Grid.Column="3" MinWidth="140" Text="查看许可文档" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
+                    <local:MyButton Grid.Row="6" Grid.Column="3" MinWidth="140" Text="查看许可文档" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
                                     local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://opensource.org/licenses/MIT" />
                     
-                    <TextBlock Grid.Row="6" Grid.Column="0" Text="NAudio" TextWrapping="Wrap" FontWeight="Bold" />
-                    <TextBlock Grid.Row="6" Grid.Column="2" Grid.ColumnSpan="2" Text="Copyright © 2015 Mark Heath (mark.heath@gmail.com)&#xa;Licensed under the MIT License." TextWrapping="Wrap" />
-                    <local:MyButton Grid.Row="7" Grid.Column="2" MinWidth="140" Text="查看来源网站" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
+                    <TextBlock Grid.Row="7" Grid.Column="0" Text="NAudio" TextWrapping="Wrap" FontWeight="Bold" />
+                    <TextBlock Grid.Row="7" Grid.Column="2" Grid.ColumnSpan="2" Text="Copyright © 2015 Mark Heath (mark.heath@gmail.com)&#xa;Licensed under the MIT License." TextWrapping="Wrap" />
+                    <local:MyButton Grid.Row="8" Grid.Column="2" MinWidth="140" Text="查看来源网站" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
                                     local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://github.com/naudio/NAudio" />
-                    <local:MyButton Grid.Row="7" Grid.Column="3" MinWidth="140" Text="查看许可文档" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left" 
+                    <local:MyButton Grid.Row="8" Grid.Column="3" MinWidth="140" Text="查看许可文档" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left" 
                                     local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://github.com/naudio/NAudio/blob/master/license.txt" />
 
-                    <TextBlock Grid.Row="8" Grid.Column="0" Text="Ookii.Dialogs" TextWrapping="Wrap" FontWeight="Bold" />
-                    <TextBlock Grid.Row="8" Grid.Column="2" Grid.ColumnSpan="2" Text="Copyright © 2009 Sven Groot (Ookii.org)" TextWrapping="Wrap" />
-                    <local:MyButton Grid.Row="9" Grid.Column="2" MinWidth="140" Text="查看来源网站" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
+                    <TextBlock Grid.Row="9" Grid.Column="0" Text="Ookii.Dialogs" TextWrapping="Wrap" FontWeight="Bold" />
+                    <TextBlock Grid.Row="9" Grid.Column="2" Grid.ColumnSpan="2" Text="Copyright © 2009 Sven Groot (Ookii.org)" TextWrapping="Wrap" />
+                    <local:MyButton Grid.Row="10" Grid.Column="2" MinWidth="140" Text="查看来源网站" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
                                     local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://www.ookii.org/Software/Dialogs/" />
-                    <local:MyButton Grid.Row="9" Grid.Column="3" MinWidth="140" Text="查看许可文档" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
+                    <local:MyButton Grid.Row="10" Grid.Column="3" MinWidth="140" Text="查看许可文档" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
                                     local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://github.com/caioproiete/ookii-dialogs-wpf/blob/master/LICENSE" />
                     
-                    <TextBlock Grid.Row="10" Grid.Column="0" Text="Iconmonstr" TextWrapping="Wrap" FontWeight="Bold" />
-                    <TextBlock Grid.Row="10" Grid.Column="2" Grid.ColumnSpan="2" Text="Copyright © 2019 iconmonstr (Alexander Kahlkopf)" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="11" Grid.Column="0" Text="Iconmonstr" TextWrapping="Wrap" FontWeight="Bold" />
+                    <TextBlock Grid.Row="11" Grid.Column="2" Grid.ColumnSpan="2" Text="Copyright © 2019 iconmonstr (Alexander Kahlkopf)" TextWrapping="Wrap" />
                     <local:MyButton Grid.Row="11" Grid.Column="2" MinWidth="140" Text="查看来源网站" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
                                     local:CustomEventService.EventType="打开网页" local:CustomEventService.EventData="https://iconmonstr.com/" />
                     <local:MyButton Grid.Row="11" Grid.Column="3" MinWidth="140" Text="查看许可文档" Padding="13,0" Margin="0,7,20,18" HorizontalAlignment="Left"
