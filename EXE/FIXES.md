@@ -512,6 +512,63 @@ Terracotta 是 **AGPL-3.0**，但有明确例外条款：
 
 ---
 
+### Terracotta 组件的下载与安装
+
+**发现的功能缺口**：上一轮只写了「检查 `terracotta.exe` 是否存在」，**没有下载逻辑**。
+文件不存在就直接回退到旧实现——Terracotta 联机实际上永远走不到。
+
+**补上的三块**：
+
+| 模块 | 作用 |
+|---|---|
+| `ModTarGz.vb` | 极简 tar.gz 解压（.NET Framework 4.8 没有 `System.Formats.Tar`） |
+| `ModTerracotta.EnsureInstalled` | 三源回退下载 + 解压 + 安装 |
+| 联机页入口 | 开房/加入前先 `EnsureInstalled` |
+
+**tar 格式处理**：每文件 512 字节头 + 内容按 512 对齐。
+支持 UStar prefix 长路径、GNU `L` 长文件名、PAX `x` 扩展头。
+所有路径经 `SafeCombine` 校验，拒绝绝对路径、`..`、盘符，并确认最终路径仍在目标目录内。
+
+#### 踩到的关键坑：TLS 1.2
+
+首次测试三个下载源**全部失败**，错误是：
+
+```
+请求被中止: 未能创建 SSL/TLS 安全通道。
+Status: SecureChannelFailure
+```
+
+**原因**：.NET Framework 4.8 默认不启用 TLS 1.2，而 GitHub 只支持 TLS 1.2+。
+项目里从未设置过 `ServicePointManager.SecurityProtocol`（PCL 自己的下载器用的是别的库）。
+
+**修复**：下载前显式设置
+
+```vb
+ServicePointManager.SecurityProtocol = ServicePointManager.SecurityProtocol Or
+                                       SecurityProtocolType.Tls12 Or
+                                       SecurityProtocolType.Tls11
+```
+
+#### 端到端验证结果
+
+```
+结果: ✔ 成功
+耗时: 204.1 秒
+文件: terracotta.exe  8.97 MB
+文件头: MZ
+```
+
+完整链路（下载 6.95 MB → 解压 → 安装 8.97 MB）全部可用。
+测试脚本：`tests\run-terracotta-test.ps1`。
+
+#### 顺带修复的失误
+
+清理临时文件时误删了 `.vbproj`（我用 `*.vbproj.*` 通配符匹配，误伤主项目文件）。
+已从 `gh-repo` 备份恢复（40061 B，129 个 Compile 项），并重新编译验证通过。
+**教训：删除操作前必须确认精确路径，不能用宽通配符。**
+
+---
+
 ## 十一、关键陷阱备忘
 
 | 陷阱 | 说明 |

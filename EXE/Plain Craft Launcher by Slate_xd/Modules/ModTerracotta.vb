@@ -1,4 +1,7 @@
-﻿Imports System.Text
+﻿Imports System
+Imports System.Collections.Generic
+Imports System.Text
+Imports System.Runtime.InteropServices
 Imports System.Diagnostics
 Imports System.IO
 Imports Newtonsoft.Json.Linq
@@ -235,5 +238,133 @@ Public Module ModTerracotta
             Return Nothing
         End Try
     End Function
+
+
+    ''' <summary>
+    ''' Terracotta 的下载地址列表。{arch} 会替换成 x86_64 / arm64。
+    ''' 三个源依次尝试，与联机页的其它下载保持一致。
+    ''' </summary>
+    Private ReadOnly DownloadUrls As String() = {
+        "https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz",
+        "https://ghfast.top/https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz",
+        "https://gh-proxy.com/https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz"
+    }
+
+    ''' <summary>当前 CPU 架构对应的 Terracotta 包名片段。</summary>
+    Private Function ArchTag() As String
+        Select Case RuntimeInformation.ProcessArchitecture
+            Case Architecture.Arm64 : Return "arm64"
+            Case Else : Return "x86_64"
+        End Select
+    End Function
+
+    ''' <summary>
+    ''' 确保 Terracotta 已就位。缺失时下载并解压。
+    ''' </summary>
+    ''' <param name="TargetExe">期望的 terracotta.exe 路径。</param>
+    ''' <param name="Progress">进度回调（0~1）与状态文字。</param>
+    ''' <returns>是否可用。</returns>
+    Public Function EnsureInstalled(TargetExe As String,
+                                    Optional Progress As Action(Of Double, String) = Nothing) As Boolean
+        Dim ArchivePath As String = Nothing
+        Dim ExtractDir As String = Nothing
+        Try
+            If FileUtils.Exists(TargetExe) Then Return True
+
+            Dim Dir = PathUtils.RemoveLastPart(TargetExe)
+            DirectoryUtils.Create(Dir)
+
+            Dim Urls = DownloadUrls.Select(Function(u) u.Replace("{arch}", ArchTag())).ToList()
+            ArchivePath = System.IO.Path.Combine(PathTemp, $"terracotta-{Guid.NewGuid():N}.tar.gz")
+            DirectoryUtils.Create(PathTemp)
+
+            '---- 下载 ----
+            Dim Ok As Boolean = False
+            For Each Url In Urls
+                Try
+                    Progress?.Invoke(0.1, $"正在下载联机组件……")
+                    Logger.Info($"下载 Terracotta：{Url}")
+                    DownloadFile(Url, ArchivePath, Sub(r) Progress?.Invoke(0.1 + r * 0.7, "正在下载联机组件……"))
+                    If FileUtils.Exists(ArchivePath) AndAlso New FileInfo(ArchivePath).Length > 1024 * 1024 Then
+                        Ok = True
+                        Exit For
+                    End If
+                Catch ex As Exception
+                    Logger.Warn(ex, $"从该源下载失败：{Url}")
+                End Try
+            Next
+            If Not Ok Then
+                Logger.Warn("所有下载源均失败")
+                Return False
+            End If
+
+            '---- 解压 ----
+            Progress?.Invoke(0.85, "正在解压联机组件……")
+            ExtractDir = System.IO.Path.Combine(PathTemp, $"tc-{Guid.NewGuid():N}")
+            Dim Count = ModTarGz.Extract(ArchivePath, ExtractDir)
+            If Count = 0 Then
+                Logger.Warn("解压后没有任何文件")
+                Return False
+            End If
+
+            '包里只有一个 exe，找到它并改名
+            Dim ExeFile = Directory.EnumerateFiles(ExtractDir, "*.exe", SearchOption.AllDirectories).FirstOrDefault()
+            If ExeFile Is Nothing Then
+                Logger.Warn("压缩包里没有找到 exe")
+                Return False
+            End If
+            If FileUtils.Exists(TargetExe) Then FileUtils.Delete(TargetExe, True)
+            FileUtils.Move(ExeFile, TargetExe)
+
+            Progress?.Invoke(1.0, "联机组件已就绪")
+            Logger.Info($"Terracotta 已安装到 {TargetExe}")
+            Return True
+        Catch ex As Exception
+            Logger.Error(ex, "安装 Terracotta 失败")
+            Return False
+        Finally
+            Try
+                If ArchivePath IsNot Nothing AndAlso FileUtils.Exists(ArchivePath) Then FileUtils.Delete(ArchivePath, True)
+            Catch
+            End Try
+            Try
+                If ExtractDir IsNot Nothing AndAlso DirectoryUtils.Exists(ExtractDir) Then Directory.Delete(ExtractDir, True)
+            Catch
+            End Try
+        End Try
+    End Function
+
+    ''' <summary>
+    ''' 带进度的单文件下载。失败抛异常，由调用方换源重试。
+    ''' </summary>
+    Private Sub DownloadFile(Url As String, Target As String, OnProgress As Action(Of Double))
+        'GitHub 只支持 TLS 1.2+，而 .NET Framework 4.8 默认不启用。
+        '不显式设置会直接报「未能创建 SSL/TLS 安全通道」。
+        Net.ServicePointManager.SecurityProtocol = Net.ServicePointManager.SecurityProtocol Or
+                                                   Net.SecurityProtocolType.Tls12 Or
+                                                   Net.SecurityProtocolType.Tls11
+        Dim Req = CType(Net.WebRequest.Create(Url), Net.HttpWebRequest)
+        Req.UserAgent = "Plain Craft Launcher"
+        Req.Timeout = 30000
+        Req.ReadWriteTimeout = 30000
+        Req.AllowAutoRedirect = True
+        'GitHub 会重定向到 objects.githubusercontent.com，必须跟随
+        Using Resp = CType(Req.GetResponse(), Net.HttpWebResponse)
+            Dim Total = Resp.ContentLength
+            Using RespStream = Resp.GetResponseStream()
+                Using Out As New FileStream(Target, FileMode.Create, FileAccess.Write)
+                    Dim Buf(8191) As Byte
+                    Dim Read As Long = 0
+                    Do
+                        Dim N = RespStream.Read(Buf, 0, Buf.Length)
+                        If N <= 0 Then Exit Do
+                        Out.Write(Buf, 0, N)
+                        Read += N
+                        If Total > 0 Then OnProgress?.Invoke(CDbl(Read) / Total)
+                    Loop
+                End Using
+            End Using
+        End Using
+    End Sub
 
 End Module

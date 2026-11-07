@@ -1224,6 +1224,11 @@ ForcedPass:
     ''' </summary>
     Private Shared Function TryStartHostWithTerracotta() As Boolean
         Try
+            '组件缺失时先下载（首次使用会下载约 7 MB）
+            If Not ModTerracotta.EnsureInstalled(TerracottaExe) Then
+                Logger.Warn("Terracotta 组件不可用")
+                Return False
+            End If
             If Not ModTerracotta.Start(TerracottaExe) Then Return False
             If Not ModTerracotta.StartHost() Then
                 ModTerracotta.Stop()
@@ -1243,6 +1248,11 @@ ForcedPass:
     ''' </summary>
     Private Shared Function TryJoinWithTerracotta(Code As String) As Boolean
         Try
+            '组件缺失时先下载（首次使用会下载约 7 MB）
+            If Not ModTerracotta.EnsureInstalled(TerracottaExe) Then
+                Logger.Warn("Terracotta 组件不可用")
+                Return False
+            End If
             If Not ModTerracotta.Start(TerracottaExe) Then Return False
             If Not ModTerracotta.JoinRoom(Code) Then
                 ModTerracotta.Stop()

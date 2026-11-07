@@ -233,6 +233,7 @@
     <Compile Include="Modules\ModRecycleBin.vb" />
     <Compile Include="Modules\ModNatCheck.vb" />
     <Compile Include="Modules\ModTerracotta.vb" />
+    <Compile Include="Modules\ModTarGz.vb" />
     <Compile Include="Modules\ModSaveBackup.vb" />
     <Compile Include="Modules\Resource\LocalResourceLoaders.vb" />
     <Compile Include="Modules\Minecraft\ModModpack.vb" />
