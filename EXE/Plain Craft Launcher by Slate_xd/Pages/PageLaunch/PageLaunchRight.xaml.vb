@@ -157,13 +157,28 @@ Public Class PageLaunchRight
         End Try
     End Sub
 
+    'SPT · 按钮加载：内存优化耗时不定，点击后按钮进入「进行中」并禁用，
+    '避免重复提交；无论成功失败都在 Finally 恢复，失败可立即重试。
     Private Sub BtnQuickMemory_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnQuickMemory.Click
-        Try
-            RunInThread(Sub() PageOtherTest.MemoryOptimize(True))
-        Catch ex As Exception
-            Logger.Error(ex, "内存优化执行失败")
-            Hint($"执行失败：{ex.Message}", HintType.Red)
-        End Try
+        If Not BtnQuickMemory.IsEnabled Then Return
+        Dim OldText As String = BtnQuickMemory.Text
+        BtnQuickMemory.IsEnabled = False
+        BtnQuickMemory.Text = "优化中…"
+        RunInThread(
+        Sub()
+            Try
+                PageOtherTest.MemoryOptimize(True)
+            Catch ex As Exception
+                Logger.Error(ex, "内存优化执行失败")
+                Hint($"执行失败：{ex.Message}", HintType.Red)
+            Finally
+                RunInUi(
+                Sub()
+                    BtnQuickMemory.Text = OldText
+                    BtnQuickMemory.IsEnabled = True
+                End Sub)
+            End Try
+        End Sub)
     End Sub
 
     Private Sub BtnQuickFolder_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnQuickFolder.Click
@@ -561,7 +576,7 @@ Public Class PageLaunchRight
 #Region "公告"
 
     ''' <summary>
-    ''' 从服务端拉取公告并渲染到主页。失败时静默隐藏，只写日志。
+    ''' 从服务端拉取公告并渲染到主页。无公告时隐藏卡片；加载失败时显示可重试提示。
     ''' </summary>
     Private Sub LoadNotices()
         Try
@@ -580,10 +595,53 @@ Public Class PageLaunchRight
                     End Sub)
                 Catch ex As Exception
                     Logger.Warn(ex, "加载公告失败")
+                    'SPT · 任务反馈：区分「没有公告」与「加载失败」，失败给可重试入口，
+                    '不再静默隐藏让玩家以为本来就没有公告。
+                    RunInUi(Sub() RenderNoticesFailed())
                 End Try
             End Sub)
         Catch ex As Exception
             Logger.Warn(ex, "刷新公告失败")
+        End Try
+    End Sub
+
+    ''' <summary>
+    ''' SPT · 公告加载失败时的内联提示：说明状态并提供重试，不静默隐藏。
+    ''' </summary>
+    Private Sub RenderNoticesFailed()
+        Try
+            If PanNotice Is Nothing OrElse PanNoticeList Is Nothing Then Return
+            PanNoticeList.Children.Clear()
+            PanNotice.Visibility = Visibility.Visible
+
+            Dim Row As New StackPanel With {.Orientation = Orientation.Horizontal}
+            Dim Msg As New TextBlock With {
+                .Text = "公告加载失败，可能是网络不通。",
+                .FontSize = 13,
+                .VerticalAlignment = VerticalAlignment.Center,
+                .Foreground = New SolidColorBrush(Color.FromArgb(170, 128, 128, 128))
+            }
+            Dim Retry As New TextBlock With {
+                .Text = "重试",
+                .FontSize = 13,
+                .Margin = New Thickness(10, 0, 0, 0),
+                .VerticalAlignment = VerticalAlignment.Center,
+                .Cursor = Cursors.Hand,
+                .Foreground = New SolidColorBrush(Color.FromRgb(47, 123, 255)),
+                .TextDecorations = TextDecorations.Underline
+            }
+            AddHandler Retry.MouseLeftButtonUp,
+                Sub(sender As Object, e As MouseButtonEventArgs)
+                    e.Handled = True
+                    Retry.Text = "重试中…"
+                    Retry.IsEnabled = False
+                    LoadNotices()
+                End Sub
+            Row.Children.Add(Msg)
+            Row.Children.Add(Retry)
+            PanNoticeList.Children.Add(Row)
+        Catch ex As Exception
+            Logger.Warn(ex, "渲染公告失败提示时出错")
         End Try
     End Sub
 

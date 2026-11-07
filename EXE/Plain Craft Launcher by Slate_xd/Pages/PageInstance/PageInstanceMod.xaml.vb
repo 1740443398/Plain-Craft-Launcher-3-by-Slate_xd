@@ -590,59 +590,101 @@ Install:
             Dim InstallLoaders As New List(Of LoaderBase)
             Dim FinishedFileNames As New List(Of String)
             InstallLoaders.Add(New LoaderDownload("下载新版 Mod 文件", FileList) With {.ProgressWeight = ModList.Count * 1.5}) '每个 Mod 需要 1.5s
-            InstallLoaders.Add(New LoaderTask(Of Integer, Integer)("替换旧版 Mod 文件",
-            Sub()
-                '修复 #9003：原逻辑先删光所有旧 Mod 再移动新文件，一旦移动失败（文件被占用等）
-                '就会两头落空、直接丢失 Mod。改为「先移入新文件，移动成功后才删除对应的旧文件」，
-                '任一步失败都保留原文件，最多是更新不成功而不是丢文件。
-                Dim MovedNew As New List(Of String)
-                Dim FailedOld As New Dictionary(Of String, String)
-                Try
-                    '第一步：移入新文件（此时旧文件仍在）
-                    For Each Entry As KeyValuePair(Of String, String) In FileCopyList
-                        If Not DirectoryUtils.Exists(PathUtils.RemoveLastPart(Entry.Value)) Then
-                            Logger.Warn($"更新后的目标文件夹已被删除，跳过：{Entry.Value}")
-                            Continue For
-                        End If
-                        Try
-                            '目标同名文件若存在，先挪到 .pclbak，移动成功后再删
-                            Dim Backup As String = Entry.Value & ".pclbak"
-                            If FileUtils.Exists(Entry.Value) Then
-                                FileUtils.Delete(Backup, True)
-                                FileUtils.Move(Entry.Value, Backup)
-                            End If
-                            FileUtils.Move(Entry.Key, Entry.Value)
-                            MovedNew.Add(Entry.Value)
-                            If FileUtils.Exists(Backup) Then FileUtils.Delete(Backup, True)
-                            FinishedFileNames.Add(PathUtils.GetLastPart(Entry.Value))
-                        Catch ex As Exception
-                            Logger.Warn(ex, $"移入新 Mod 失败，保留旧文件：{Entry.Value}")
-                            FailedOld(Entry.Value) = PathUtils.GetLastPart(Entry.Value)
-                        End Try
-                    Next
-                    '第二步：逐个检查，新文件确实已就位的才删除对应旧 Mod
-                    For Each Pair As KeyValuePair(Of String, String) In FileCopyList
-                        Dim NewPath As String = Pair.Value
-                        If Not MovedNew.Contains(NewPath) Then Continue For  '新文件没移成功，保留旧文件
-                        '找到与该新文件对应的旧 Mod（同目录、同基名）
-                        For Each Entry As LocalResourceFile In ModList
-                            If Not FileUtils.Exists(Entry.File.FullName) Then Continue For
-                            '旧文件与新文件同目录、且将被替换
-                            If Not String.Equals(PathUtils.RemoveLastPart(Entry.File.FullName), PathUtils.RemoveLastPart(NewPath), StringComparison.OrdinalIgnoreCase) Then Continue For
+                InstallLoaders.Add(New LoaderTask(Of Integer, Integer)("替换旧版 Mod 文件",
+                Sub()
+                    '修复 #9003（事务式）：原逻辑先删光旧 Mod 再移新文件，移动失败就两头落空。
+                    '本实现把整批替换当成一个事务：先把所有旧文件挪到 .pclbak 并记入日志，
+                    '再逐个移入新文件；中途任何一步失败就按日志逆序回滚，恢复成更新前的状态。
+                    '参考 PCL-Living-Fork 的「先写新版、再处理旧路径，两步同属一个备份/回滚事务」。
+                    Dim Journal As New List(Of String())   '每项：{原路径, 备份路径}，按处理顺序
+                    Dim MovedNew As New List(Of String)
+                    Dim Failed As Boolean = False
+                    Dim Rollback As Action =
+                    Sub()
+                        '逆序回滚：先撤销新文件，再恢复旧文件
+                        For Each NewPath As String In MovedNew
                             Try
-                                FileUtils.Delete(Entry.File.FullName, True)
+                                If FileUtils.Exists(NewPath) Then FileUtils.Delete(NewPath, True)
                             Catch ex As Exception
-                                Logger.Warn(ex, $"删除旧 Mod 失败（新文件已就位）：{Entry.File.FullName}")
+                                Logger.Warn(ex, $"回滚：删除新文件失败 {NewPath}")
                             End Try
                         Next
-                    Next
-                    If FailedOld.Count > 0 Then
-                        Logger.Warn($"有 {FailedOld.Count} 个 Mod 更新失败，旧文件已保留")
-                    End If
-                Catch ex As OperationCanceledException
-                    Logger.Warn(ex, "替换旧版 Mod 文件时被主动取消")
-                End Try
-            End Sub))
+                        For i As Integer = Journal.Count - 1 To 0 Step -1
+                            Try
+                                Dim Orig As String = Journal(i)(0)
+                                Dim Bak As String = Journal(i)(1)
+                                If FileUtils.Exists(Bak) AndAlso Not FileUtils.Exists(Orig) Then FileUtils.Move(Bak, Orig)
+                            Catch ex As Exception
+                                Logger.Error(ex, $"回滚：恢复旧文件失败 {Journal(i)(0)}")
+                            End Try
+                        Next
+                        MovedNew.Clear()
+                        Journal.Clear()
+                        FinishedFileNames.Clear()
+                    End Sub
+                    Try
+                        '阶段一：把所有将被替换的旧文件挪到 .pclbak（此时新文件还没动）
+                        For Each Entry As KeyValuePair(Of String, String) In FileCopyList
+                            Dim Target As String = Entry.Value
+                            If Not DirectoryUtils.Exists(PathUtils.RemoveLastPart(Target)) Then Continue For
+                            If Not FileUtils.Exists(Target) Then Continue For   '目标不存在，无需备份
+                            Dim Bak As String = Target & ".pclbak"
+                            Try
+                                If FileUtils.Exists(Bak) Then FileUtils.Delete(Bak, True)
+                                FileUtils.Move(Target, Bak)
+                                Journal.Add({Target, Bak})
+                            Catch ex As Exception
+                                Logger.Warn(ex, $"备份旧 Mod 失败，中止本次更新：{Target}")
+                                Failed = True
+                                Exit For
+                            End Try
+                        Next
+                        '阶段二：全部备份成功才开始移入新文件
+                        If Not Failed Then
+                            For Each Entry As KeyValuePair(Of String, String) In FileCopyList
+                                Dim Target As String = Entry.Value
+                                If Not DirectoryUtils.Exists(PathUtils.RemoveLastPart(Target)) Then
+                                    Logger.Warn($"更新后的目标文件夹已被删除，跳过：{Target}")
+                                    Continue For
+                                End If
+                                Try
+                                    FileUtils.Move(Entry.Key, Target)
+                                    MovedNew.Add(Target)
+                                Catch ex As Exception
+                                    Logger.Warn(ex, $"移入新 Mod 失败，整批回滚：{Target}")
+                                    Failed = True
+                                    Exit For
+                                End Try
+                            Next
+                        End If
+                        '阶段三：全部成功才提交（删除备份），否则整体回滚
+                        If Failed Then
+                            Logger.Warn("Mod 更新失败，正在回滚到更新前的状态")
+                            Rollback()
+                            Throw New Exception("Mod 更新未能完成，已恢复到更新前的状态")
+                        Else
+                            For Each Pair As String() In Journal
+                                Try
+                                    If FileUtils.Exists(Pair(1)) Then FileUtils.Delete(Pair(1), True)
+                                Catch ex As Exception
+                                    Logger.Warn(ex, $"清理备份失败（不影响更新结果）：{Pair(1)}")
+                                End Try
+                            Next
+                            Journal.Clear()
+                            For Each NewPath As String In MovedNew
+                                FinishedFileNames.Add(PathUtils.GetLastPart(NewPath))
+                            Next
+                        End If
+                    Catch ex As OperationCanceledException
+                        Logger.Warn(ex, "替换旧版 Mod 文件时被主动取消，正在回滚")
+                        Rollback()
+                        Throw
+                    Catch ex As Exception
+                        Logger.Error(ex, "替换旧版 Mod 文件时出错")
+                        If MovedNew.Count > 0 OrElse Journal.Count > 0 Then Rollback()
+                        Throw
+                    End Try
+                End Sub))
             '结束处理
             Dim Loader As New LoaderCombo(Of IEnumerable(Of LocalResourceFile))("Mod 更新：" & PageInstanceLeft.Instance.Name, InstallLoaders)
             Dim PathMods As String = PageInstanceLeft.Instance.PathIndie & "mods\"
