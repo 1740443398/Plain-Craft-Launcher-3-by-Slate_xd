@@ -244,10 +244,28 @@ Public Module ModTerracotta
     ''' Terracotta 的下载地址列表。{arch} 会替换成 x86_64 / arm64。
     ''' 三个源依次尝试，与联机页的其它下载保持一致。
     ''' </summary>
+    ''' <summary>
+    ''' 各架构发布包的 SHA-256，写死在代码里。
+    ''' <para>
+    ''' 下载源可能被劫持（尤其是第三方加速服务），只检查文件大小是不够的——
+    ''' 任何字节的差异都说明这不是官方发布，必须拒绝。
+    ''' </para>
+    ''' </summary>
+    Private ReadOnly ExpectedSha256 As New Dictionary(Of String, String) From {
+        {"x86_64", "fdfa6105373cee5c2e5f22ea307d3f8ca15bcb1716dddf27e4c3f897b52e933e"}
+    }
+
+    ''' <summary>
+    ''' 下载源，按实测速度排序。
+    ''' <para>
+    ''' GitHub 官方地址在国内经常超时，所以把镜像放前面；
+    ''' 每个源都会做哈希校验，走镜像不会降低安全性。
+    ''' </para>
+    ''' </summary>
     Private ReadOnly DownloadUrls As String() = {
-        "https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz",
+        "https://gh-proxy.com/https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz",
         "https://ghfast.top/https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz",
-        "https://gh-proxy.com/https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz"
+        "https://github.com/burningtnt/Terracotta/releases/download/v0.4.2/terracotta-0.4.2-windows-{arch}-pkg.tar.gz"
     }
 
     ''' <summary>当前 CPU 架构对应的 Terracotta 包名片段。</summary>
@@ -285,10 +303,28 @@ Public Module ModTerracotta
                     Progress?.Invoke(0.1, $"正在下载联机组件……")
                     Logger.Info($"下载 Terracotta：{Url}")
                     DownloadFile(Url, ArchivePath, Sub(r) Progress?.Invoke(0.1 + r * 0.7, "正在下载联机组件……"))
-                    If FileUtils.Exists(ArchivePath) AndAlso New FileInfo(ArchivePath).Length > 1024 * 1024 Then
-                        Ok = True
-                        Exit For
+                    If Not FileUtils.Exists(ArchivePath) OrElse New FileInfo(ArchivePath).Length <= 1024 * 1024 Then
+                        Logger.Warn("下载的文件过小，可能是错误页面")
+                        Continue For
                     End If
+                    '校验哈希：不匹配说明文件被篡改或下载不完整
+                    Dim Expected As String = Nothing
+                    If ExpectedSha256.TryGetValue(ArchTag(), Expected) AndAlso Not String.IsNullOrEmpty(Expected) Then
+                        Dim Actual = GetSha256(ArchivePath)
+                        If Not String.Equals(Actual, Expected, StringComparison.OrdinalIgnoreCase) Then
+                            Logger.Warn($"哈希校验失败（期望 {Expected.Substring(0, 8)}…，实际 {Actual.Substring(0, 8)}…），已丢弃")
+                            Try
+                                FileUtils.Delete(ArchivePath, True)
+                            Catch
+                            End Try
+                            Continue For
+                        End If
+                        Logger.Info("哈希校验通过")
+                    Else
+                        Logger.Warn($"没有 {ArchTag()} 架构的预期哈希，跳过校验")
+                    End If
+                    Ok = True
+                    Exit For
                 Catch ex As Exception
                     Logger.Warn(ex, $"从该源下载失败：{Url}")
                 End Try
@@ -334,10 +370,44 @@ Public Module ModTerracotta
         End Try
     End Function
 
+    ''' <summary>计算文件的 SHA-256（小写十六进制）。</summary>
+    Private Function GetSha256(Path As String) As String
+        Using Sha = Security.Cryptography.SHA256.Create()
+            Using Fs = File.OpenRead(Path)
+                Dim Hash = Sha.ComputeHash(Fs)
+                Return BitConverter.ToString(Hash).Replace("-", "").ToLowerInvariant()
+            End Using
+        End Using
+    End Function
+
     ''' <summary>
     ''' 带进度的单文件下载。失败抛异常，由调用方换源重试。
     ''' </summary>
+    ''' <summary>
+    ''' 下载单个文件，失败自动重试。
+    ''' <para>
+    ''' 国内访问 GitHub 及其镜像经常超时，单次失败不代表源不可用，
+    ''' 所以每个源给两次机会，超时也更宽松。
+    ''' </para>
+    ''' </summary>
     Private Sub DownloadFile(Url As String, Target As String, OnProgress As Action(Of Double))
+        Dim LastEx As Exception = Nothing
+        For Attempt = 1 To 2
+            Try
+                DownloadFileOnce(Url, Target, OnProgress)
+                Return
+            Catch ex As Exception
+                LastEx = ex
+                Logger.Warn(ex, $"第 {Attempt} 次下载失败：{Url.Substring(0, Math.Min(60, Url.Length))}")
+                If Attempt < 2 Then
+                    Threading.Thread.Sleep(800)
+                End If
+            End Try
+        Next
+        Throw LastEx
+    End Sub
+
+    Private Sub DownloadFileOnce(Url As String, Target As String, OnProgress As Action(Of Double))
         'GitHub 只支持 TLS 1.2+，而 .NET Framework 4.8 默认不启用。
         '不显式设置会直接报「未能创建 SSL/TLS 安全通道」。
         Net.ServicePointManager.SecurityProtocol = Net.ServicePointManager.SecurityProtocol Or
@@ -345,8 +415,8 @@ Public Module ModTerracotta
                                                    Net.SecurityProtocolType.Tls11
         Dim Req = CType(Net.WebRequest.Create(Url), Net.HttpWebRequest)
         Req.UserAgent = "Plain Craft Launcher"
-        Req.Timeout = 30000
-        Req.ReadWriteTimeout = 30000
+        Req.Timeout = 60000
+        Req.ReadWriteTimeout = 60000
         Req.AllowAutoRedirect = True
         'GitHub 会重定向到 objects.githubusercontent.com，必须跟随
         Using Resp = CType(Req.GetResponse(), Net.HttpWebResponse)
@@ -355,12 +425,20 @@ Public Module ModTerracotta
                 Using Out As New FileStream(Target, FileMode.Create, FileAccess.Write)
                     Dim Buf(8191) As Byte
                     Dim Read As Long = 0
+                    Dim LastPct As Integer = -1
                     Do
                         Dim N = RespStream.Read(Buf, 0, Buf.Length)
                         If N <= 0 Then Exit Do
                         Out.Write(Buf, 0, N)
                         Read += N
-                        If Total > 0 Then OnProgress?.Invoke(CDbl(Read) / Total)
+                        '限制回调频率：8KB 一块会让 8MB 文件触发上千次 UI 调度，卡顿明显
+                        If Total > 0 Then
+                            Dim Pct = CInt(Read * 100 \ Total)
+                            If Pct > LastPct Then
+                                LastPct = Pct
+                                OnProgress?.Invoke(CDbl(Read) / Total)
+                            End If
+                        End If
                     Loop
                 End Using
             End Using

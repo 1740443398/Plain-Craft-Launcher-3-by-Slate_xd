@@ -1346,4 +1346,18 @@ ForcedPass:
         End Select
     End Function
 
+
+    ''' <summary>
+    ''' AGPL 合规：点击版权标识打开 Terracotta 项目主页。
+    ''' 例外条款要求「界面明显处标识版权」，这里同时提供可核对的来源链接。
+    ''' </summary>
+    Private Sub LabTerracottaCredit_MouseLeftButtonUp(sender As Object, e As MouseButtonEventArgs) Handles LabTerracottaCredit.MouseLeftButtonUp
+        e.Handled = True
+        Try
+            OpenWebsite("https://github.com/burningtnt/Terracotta")
+        Catch ex As Exception
+            Logger.Warn(ex, "打开 Terracotta 主页失败")
+        End Try
+    End Sub
+
 End Class
