@@ -837,14 +837,26 @@ Install:
             '按删除时间倒序，最近的在前
             Entries = Entries.OrderByDescending(Function(e) e.DeletedTime).ToList()
 
-            '第一步：选条目
-            Dim Radios As New List(Of IMyRadio)
+            '第一步：选条目。第 0 项固定是「清空」，其余是具体条目。
+            Dim Radios As New List(Of IMyRadio) From {
+                New MyRadioBox With {.Text = $"清空回收站（{Entries.Count} 项，不可恢复）"}
+            }
             For Each Entry In Entries
                 Radios.Add(New MyRadioBox With {.Text = Entry.DisplayText})
             Next
             Dim Picked = MyMsgBoxSelect(Radios, $"回收站（{Entries.Count} 项）", "下一步", "取消")
             If Picked Is Nothing Then Return
-            Dim Target = Entries(Picked.Value)
+
+            '清空：二次确认后一次性删完
+            If Picked.Value = 0 Then
+                If MyMsgBox($"确定要清空回收站吗？这 {Entries.Count} 个文件将被彻底删除，无法恢复。",
+                            "清空回收站", "清空", "取消", IsWarn:=True) <> 1 Then Return
+                Dim Cleared = ModRecycleBin.ClearAll(McInstanceSelected)
+                Hint($"已清空回收站，删除 {Cleared} 个文件", HintType.Green)
+                Return
+            End If
+
+            Dim Target = Entries(Picked.Value - 1)
 
             '第二步：选动作
             Dim Actions As New List(Of IMyRadio) From {

@@ -260,7 +260,11 @@ Public Class PageLaunchRight
         End Try
     End Sub
 
+    'SPT · 加载反馈：下载投影预览是耗时且可能失败的操作。
+    '原实现把「恢复按钮」写在成功路径里，一旦抛异常按钮就永久禁用，玩家只能重启启动器。
+    '改为 Try/Finally 保证一定恢复；失败时给出可读原因并保留重试入口。
     Private Sub BtnSchematicViewerDownload_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnSchematicViewerDownload.Click
+        If Not BtnSchematicViewerDownload.IsEnabled Then Return
         BtnSchematicViewerDownload.IsEnabled = False
         BarSchematicViewer.Visibility = Visibility.Visible
         BarSchematicViewer.Value = 0
@@ -269,19 +273,36 @@ Public Class PageLaunchRight
 
         RunInThread(
         Sub()
-            ModSchematicPreview.DownloadSchematicViewer(
-                Sub(Ratio As Double) RunInUi(Sub() BarSchematicViewer.Value = Ratio),
-                Sub(State As String) RunInUi(Sub() LabSchematicViewerState.Text = State))
-            RunInUi(
-            Sub()
-                Try
+            Dim Succeeded As Boolean = False
+            Try
+                ModSchematicPreview.DownloadSchematicViewer(
+                    Sub(Ratio As Double) RunInUi(Sub() BarSchematicViewer.Value = Ratio),
+                    Sub(State As String) RunInUi(Sub() LabSchematicViewerState.Text = State))
+                Succeeded = True
+            Catch ex As Exception
+                Logger.Error(ex, "下载投影预览失败")
+            Finally
+                '无论成功失败都要恢复按钮，否则玩家只能重启
+                RunInUi(
+                Sub()
                     BtnSchematicViewerDownload.IsEnabled = True
-                    BarSchematicViewer.Visibility = Visibility.Collapsed
-                    RefreshSchematicViewerCard()
-                Catch ex As Exception
-                    Logger.Warn(ex, "刷新投影预览卡片失败")
-                End Try
-            End Sub)
+                    If Succeeded Then
+                        BarSchematicViewer.Visibility = Visibility.Collapsed
+                        LabSchematicViewerState.Visibility = Visibility.Collapsed
+                        Try
+                            RefreshSchematicViewerCard()
+                        Catch ex As Exception
+                            Logger.Warn(ex, "刷新投影预览卡片失败")
+                        End Try
+                    Else
+                        '失败：进度条归零并显示原因，按钮保持可点以便重试
+                        BarSchematicViewer.Visibility = Visibility.Collapsed
+                        BarSchematicViewer.Value = 0
+                        LabSchematicViewerState.Visibility = Visibility.Visible
+                        LabSchematicViewerState.Text = "下载失败，可点击「下载投影预览」重试"
+                    End If
+                End Sub)
+            End Try
         End Sub)
     End Sub
 

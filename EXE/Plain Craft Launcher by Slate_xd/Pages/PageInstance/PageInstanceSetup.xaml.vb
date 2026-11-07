@@ -567,4 +567,46 @@ PreFin:
         sender.CaretIndex = Math.Max(0, CaretIndex - 1)
     End Sub
 
+
+    ''' <summary>
+    ''' SPT · 可撤销：列出存档备份，选一个还原到新目录（不覆盖现有存档）。
+    ''' </summary>
+    Private Sub BtnRestoreBackup_Click() Handles BtnRestoreBackup.Click
+        Try
+            If McInstanceSelected Is Nothing Then
+                Hint("请先选择一个版本", HintType.Blue)
+                Return
+            End If
+            Dim Backups = ModSaveBackup.ListBackups(McInstanceSelected)
+            If Backups.Count = 0 Then
+                Hint("还没有备份。游戏正常退出后会自动备份有变化的世界。", HintType.Blue)
+                Return
+            End If
+            Backups = Backups.OrderByDescending(Function(b) b.CreatedTime).ToList()
+
+            Dim Radios As New List(Of IMyRadio)
+            For Each Entry In Backups
+                Radios.Add(New MyRadioBox With {.Text = Entry.DisplayText})
+            Next
+            Dim Picked = MyMsgBoxSelect(Radios, $"存档备份（{Backups.Count} 份）", "还原", "取消")
+            If Picked Is Nothing Then Return
+            Dim Target = Backups(Picked.Value)
+
+            '还原到「原世界名_还原_时间」目录，避免覆盖现有存档
+            Dim SafeName = String.Join("_", Target.WorldName.Split(Path.GetInvalidFileNameChars()))
+            Dim NewDir = $"{McInstanceSelected.PathIndie}saves\{SafeName}_还原_{DateTime.Now:MMddHHmm}"
+            If MyMsgBox($"将把备份「{Target.WorldName}」还原到：{vbCrLf}{NewDir}{vbCrLf}{vbCrLf}" &
+                        "不会覆盖现有存档。要继续吗？", "还原存档", "还原", "取消") <> 1 Then Return
+
+            If ModSaveBackup.RestoreBackup(McInstanceSelected, Target, NewDir) Then
+                Hint($"已还原到 {SafeName}_还原_{DateTime.Now:MMddHHmm}", HintType.Green)
+            Else
+                Hint("还原失败，请查看日志", HintType.Red)
+            End If
+        Catch ex As Exception
+            Logger.Error(ex, "还原存档备份失败")
+            Hint($"还原失败：{ex.Message}", HintType.Red)
+        End Try
+    End Sub
+
 End Class

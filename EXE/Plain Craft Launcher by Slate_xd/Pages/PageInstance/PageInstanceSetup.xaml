@@ -219,6 +219,13 @@
                     <local:MyButton x:Name="BtnServerAuthLittle" Height="35" MinWidth="150" Margin="0,12,0,0" Text="设置为 LittleSkin" HorizontalAlignment="Left" ColorType="Highlight" />
                 </StackPanel>
             </local:MyCard>
+            <local:MyCard x:Name="CardSaveBackup" Margin="0,0,0,15" Title="存档备份">
+                <StackPanel Margin="25,40,25,18">
+                    <TextBlock TextWrapping="Wrap" Text="游戏正常退出后会自动备份有变化的世界，防止误删或存档损坏。每个世界默认保留 3 份。"
+                               Foreground="{DynamicResource ColorBrushGray3}" Margin="0,0,0,12" />
+                    <local:MyButton x:Name="BtnRestoreBackup" Height="35" MinWidth="150" Margin="0,0,0,0" Text="查看并还原备份" HorizontalAlignment="Left" />
+                </StackPanel>
+            </local:MyCard>
             <local:MyCard x:Name="CardAdvance" Margin="0,0,0,15" Title="高级选项" IsSwapped="True" CanSwap="True">
                 <Grid Margin="25,40,25,15">
                     <Grid.ColumnDefinitions>
