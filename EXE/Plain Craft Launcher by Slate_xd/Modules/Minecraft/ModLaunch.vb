@@ -1383,6 +1383,30 @@ NextInstance:
             End Try
         End If
 
+        '离线皮肤：用 authlib-injector 指向皮肤站
+        '1.19.3 之后 Mojang 改成必须由会话服务下发签名纹理，
+        '上游那种「构造 UUID 猜皮肤」的办法对新版本必然失效，只能走这条路。
+        If McLoginLoader.Output.Type = "Legacy" AndAlso Settings.Get(Of Boolean)("LaunchSkinCustom") Then
+            Dim SkinServer As String = Settings.Get(Of String)("LaunchSkinServer")
+            If Not String.IsNullOrWhiteSpace(SkinServer) AndAlso ModSkin.IsReady Then
+                Try
+                    McLaunchLog($"离线皮肤：注入 authlib-injector → {SkinServer}")
+                    Args.Add($"-javaagent:""{ModSkin.JarPath}""=""{SkinServer}""")
+                    Args.Add("-Dauthlibinjector.side=client")
+                    '预取元数据，避免进游戏时卡一下
+                    Try
+                        Dim Meta As String = NetRequestByClientRetry(SkinServer, Encoding:=Encoding.UTF8)
+                        Args.Add("-Dauthlibinjector.yggdrasil.prefetched=" & Convert.ToBase64String(Encoding.UTF8.GetBytes(Meta)))
+                    Catch ex2 As Exception
+                        '预取失败不影响启动，让 injector 自己再拉一次
+                        McLaunchLog($"皮肤站元数据预取失败（不影响启动）：{ex2.Message}", LogLevel.Warn)
+                    End Try
+                Catch ex As Exception
+                    McLaunchLog($"注入离线皮肤失败：{ex.Message}", LogLevel.Warn)
+                End Try
+            End If
+        End If
+
         'JLW
         '非 GBK 编码下命令行参数乱码的问题（JDK-8272352）
         Dim UseJLW As Boolean =

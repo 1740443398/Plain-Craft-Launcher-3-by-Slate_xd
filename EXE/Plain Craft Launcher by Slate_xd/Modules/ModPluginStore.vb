@@ -25,6 +25,9 @@ Public Module ModPluginStore
     ''' <summary>兼容的第二个 topic（更容易被搜到）。</summary>
     Public Const TopicAlt As String = "pcl3-plugin"
 
+''' <summary>官方插件模板仓库。新人从这里开始最快。</summary>
+    Public Const TemplateRepo As String = "https://github.com/1740443398/pcl-plugin-template"
+
     ''' <summary>广场里的一个插件。</summary>
     Public Class StoreEntry
         Public Property RepoFullName As String = ""

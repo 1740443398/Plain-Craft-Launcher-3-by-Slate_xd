@@ -237,10 +237,13 @@
     <Compile Include="Modules\ModTarGz.vb" />
     <Compile Include="Modules\ModPluginAudit.vb" />
     <Compile Include="Modules\ModPluginStore.vb" />
+    <Compile Include="Modules\ModPluginPermission.vb" />
+    <Compile Include="Modules\ModPluginJava.vb" />
     <Compile Include="Modules\ModPlugin.vb" />
     <Compile Include="Modules\ModPluginScript.vb" />
     <Compile Include="Modules\ModLinkPassword.vb" />
     <Compile Include="Modules\ModLinkLobby.vb" />
+    <Compile Include="Modules\ModSkin.vb" />
     <Compile Include="Modules\ModServerCore.vb" />
     <Compile Include="Modules\ModServer.vb" />
     <Compile Include="Modules\ModApiServer.vb" />

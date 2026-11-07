@@ -97,6 +97,26 @@ Public Module ModPlugin
         ''' </summary>
         Public Property TitlebarIcon As String = ""
 
+        ''' <summary>
+        ''' 运行时类型："js"（默认，XAML+脚本）或 "java"（独立 jar 进程）。
+        ''' <para>
+        ''' Java 插件能写真正的代码，但只能通过 JSON 消息请求启动器执行操作，
+        ''' 拿不到文件系统权限。
+        ''' </para>
+        ''' </summary>
+        Public Property Runtime As String = "js"
+
+        ''' <summary>
+        ''' 申请的权限列表。可选值见 <see cref="ModPluginPermission"/>：
+        ''' network / fileRead / fileWrite / readSettings / writeSettings /
+        ''' readInstances / notify / clipboard / titlebar。
+        ''' <para>
+        ''' 首次启用时会把这里列的权限展示给用户，同意后才生效。
+        ''' 没申请的能力一律拒绝，不会静默放行。
+        ''' </para>
+        ''' </summary>
+        Public Property Permissions As String() = {}
+
         ''' <summary>清单是否具备加载所需的最少字段。</summary>
         Public ReadOnly Property IsValid As Boolean
             Get
@@ -135,6 +155,29 @@ Public Module ModPlugin
 
         ''' <summary>自定义配置页的绝对路径；未提供时为空。</summary>
         Public Property ConfigPath As String = ""
+
+        ''' <summary>是否是 Java 插件（跑独立进程）。</summary>
+        Public ReadOnly Property IsJava As Boolean
+            Get
+                Return Manifest IsNot Nothing AndAlso
+                       String.Equals(Manifest.Runtime, "java", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Java 插件的 jar 路径。</summary>
+        Public ReadOnly Property JarPath As String
+            Get
+                If String.IsNullOrWhiteSpace(Directory) Then Return ""
+                Return System.IO.Path.Combine(Directory, "plugin.jar")
+            End Get
+        End Property
+
+        ''' <summary>Java 插件是否具备运行条件。</summary>
+        Public ReadOnly Property JavaReady As Boolean
+            Get
+                Return IsJava AndAlso FileUtils.Exists(JarPath)
+            End Get
+        End Property
 
         ''' <summary>是否提供了自定义头像。</summary>
         Public ReadOnly Property HasIcon As Boolean
@@ -254,7 +297,12 @@ Public Module ModPlugin
     End Sub
 
     ''' <summary>读取某个插件的 XAML 内容。失败返回 Nothing。</summary>
+    ''' <summary>
+    ''' 读插件入口内容。Java 插件没有 XAML 入口，返回空字符串。
+    ''' </summary>
     Public Function ReadEntry(Entry As PluginEntry) As String
+        '如果是 Java 插件，没有 XAML 入口
+        If Entry IsNot Nothing AndAlso Entry.IsJava Then Return ""
         Try
             If Entry Is Nothing OrElse Not Entry.IsUsable OrElse Not Entry.Enabled Then Return Nothing
             Return FileUtils.TryReadAsString(Entry.EntryPath)

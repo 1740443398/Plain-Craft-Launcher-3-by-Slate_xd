@@ -512,4 +512,58 @@ PreFin:
         FrmMain.PageChange(FormMain.PageType.InstanceSetup, FormMain.PageSubType.InstanceSetup)
     End Sub
 
+
+    '==== 自定义皮肤 ====
+
+    ''' <summary>
+    ''' 下载 authlib-injector 并显示当前状态。
+    ''' <para>
+    ''' 这是 1.19.3 之后唯一可行的自定义皮肤方案：
+    ''' 上游那种「构造 UUID 猜默认皮肤」的办法在新版本失效了，
+    ''' 因为 Mojang 改成必须由会话服务下发带签名的纹理属性。
+    ''' </para>
+    ''' </summary>
+    Private Sub BtnSkinDownload_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnSkinDownload.MouseLeftButtonUp
+        Try
+            BtnSkinDownload.IsEnabled = False
+            BtnSkinDownload.Text = "下载中…"
+            LabSkinStatus.Text = "正在下载 authlib-injector……"
+
+            Dim T As New Threading.Thread(
+                Sub()
+                    Dim Ok As Boolean = ModSkin.EnsureJar(True)
+                    RunInUi(
+                        Sub()
+                            BtnSkinDownload.IsEnabled = True
+                            BtnSkinDownload.Text = "下载组件"
+                            If Ok Then
+                                LabSkinStatus.Text = $"组件已就绪：{ModSkin.JarPath}"
+                                Hint("authlib-injector 已下载", HintType.Green)
+                            Else
+                                LabSkinStatus.Text = "下载失败，请检查网络后重试。"
+                                Hint("下载失败", HintType.Red)
+                            End If
+                        End Sub)
+                End Sub) With {.IsBackground = True}
+            T.Start()
+        Catch ex As Exception
+            BtnSkinDownload.IsEnabled = True
+            BtnSkinDownload.Text = "下载组件"
+            Logger.Error(ex, "下载 authlib-injector 失败")
+        End Try
+    End Sub
+
+    ''' <summary>进页面时刷新一次组件状态。</summary>
+    Private Sub RefreshSkinStatus()
+        Try
+            If LabSkinStatus Is Nothing Then Return
+            If ModSkin.IsReady Then
+                LabSkinStatus.Text = "组件已就绪。填写皮肤站地址并勾选上面的选项即可生效。"
+            Else
+                LabSkinStatus.Text = "尚未下载组件。点右侧「下载组件」按钮。部分杀毒软件会误报 Java agent。"
+            End If
+        Catch ex As Exception
+            Logger.Warn(ex, "刷新皮肤状态失败")
+        End Try
+    End Sub
 End Class

@@ -576,6 +576,13 @@ Public Class FormMain
                 Logger.Warn(ex, "退出前停止服务端失败")
             End Try
         End If
+
+        'Java 插件进程也要收掉，否则退出后留在后台
+        Try
+            ModPluginJava.StopAll()
+        Catch ex As Exception
+            Logger.Warn(ex, "退出前停止 Java 插件失败")
+        End Try
         '关闭
         RunInUiWait(
         Sub()

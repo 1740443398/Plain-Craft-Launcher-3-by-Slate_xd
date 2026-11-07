@@ -165,7 +165,7 @@
             </local:MyCard>
             <local:MyCard x:Name="CardSkin" Margin="0,0,0,15" Title="离线皮肤" CanSwap="True" IsSwapped="True">
                 <StackPanel Margin="25,40,25,15">
-                    <local:MyHint Text="由于技术问题，此功能只保证对 1.19.2 以前的版本有效！" Theme="Yellow" Margin="0,0,0,10" />
+                    <local:MyHint Text="上面的默认皮肤选择只对 1.19.2 及更早版本有效。1.19.3 之后 Mojang 改了协议，需要开启下方的自定义皮肤才能生效。" Theme="Yellow" Margin="0,0,0,10" />
                     <Grid Margin="-1,0,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition />
@@ -219,6 +219,31 @@
                         <local:MyButton x:Name="BtnSkinDelete" Text="重置皮肤" MinWidth="140" Padding="13,0" Margin="0,0,20,0" ColorType="Red" Grid.Column="1" />
                     </Grid>
                 </StackPanel>
+
+                    <Border Height="1" Background="{DynamicResource ColorBrushGray2}" Margin="0,12,0,12" />
+
+                    <!-- 自定义皮肤：1.19.3+ 唯一可行的方案 -->
+                    <local:MyCheckBox x:Name="ChkSkinCustom" local:SettingService.Key="LaunchSkinCustom"
+                                      Text="启用自定义皮肤（全版本，含 1.19.3+）" Margin="0,0,0,8" />
+                    <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,0,0,10"
+                               Foreground="{DynamicResource ColorBrushGray3}"
+                               Text="原理：注入 authlib-injector，把游戏的会话服务指向一个皮肤站。这是全版本通用的正规做法。&#xa;注意：部分杀毒软件会误报 Java agent，如果不放心可以不开。" />
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="皮肤站地址" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <local:MyTextBox x:Name="TextSkinServer" Grid.Column="1" Height="32"
+                                         local:SettingService.Key="LaunchSkinServer"
+                                         HintText="https://littleskin.cn/api/yggdrasil" />
+                        <local:MyButton x:Name="BtnSkinDownload" Grid.Column="2" Text="下载组件"
+                                        Height="32" MinWidth="100" Margin="10,0,0,0" />
+                    </Grid>
+                    <TextBlock x:Name="LabSkinStatus" TextWrapping="Wrap" FontSize="12"
+                               Foreground="{DynamicResource ColorBrushGray3}" Text="" />
+
             </local:MyCard>
             <local:MyCard Margin="0,0,0,15" Title="高级选项" IsSwapped="True" CanSwap="True">
                 <Grid Margin="25,40,25,15">

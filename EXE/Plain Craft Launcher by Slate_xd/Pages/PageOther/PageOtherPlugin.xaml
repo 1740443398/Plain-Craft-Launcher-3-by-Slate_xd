@@ -1,88 +1,87 @@
-﻿<local:MyPageRight
+<local:MyPageRight
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:PCL" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d" x:Class="PageOtherPlugin"
     PanScroll="Content">
-    <Grid x:Name="Content" Margin="0,0,20,20">
+    <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="Content">
+        <Grid Margin="25,10,25,10">
 
-        <!-- ===== 0. 已安装 ===== -->
-        <StackPanel x:Name="PanSecInstalled">
+            <!-- ===== 0. 已安装 ===== -->
+            <StackPanel x:Name="PanSecInstalled">
 
-        <!-- 说明与操作 -->
-        <local:MyCard Title="插件" Margin="0,0,0,15">
-            <StackPanel Margin="25,38,25,16">
-                <TextBlock x:Name="LabPluginSummary" TextWrapping="Wrap" Text="正在扫描插件……" />
-                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                    <local:MyButton x:Name="BtnPluginNew" Text="新建插件模板" Height="32" MinWidth="130" />
-                    <local:MyButton x:Name="BtnPluginFolder" Text="打开插件目录" Height="32" MinWidth="120" Margin="10,0,0,0" />
-                    <local:MyButton x:Name="BtnPluginRescan" Text="重新扫描" Height="32" MinWidth="100" Margin="10,0,0,0" />
-                </StackPanel>
-                <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" FontSize="12"
-                           Foreground="{DynamicResource ColorBrushGray3}"
-                           Text="插件是放在 PCL\Plugins 下的独立文件夹，包含 plugin.json 清单与 main.xaml 界面。安装插件不需要重新编译启动器。&#xa;插件只能声明并使用清单里写明的权限，无法读取账号凭据。" />
-            </StackPanel>
-        </local:MyCard>
-
-        <!-- 空状态 -->
-        <local:MyCard x:Name="PanPluginEmpty" Margin="0,0,0,15" Visibility="Collapsed">
-            <StackPanel Margin="25,38,25,30">
-                <TextBlock Text="还没有安装插件" FontSize="15" HorizontalAlignment="Center"
-                           Foreground="{DynamicResource ColorBrushGray2}" />
-                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" HorizontalAlignment="Center"
-                           TextAlignment="Center" FontSize="12.5"
-                           Foreground="{DynamicResource ColorBrushGray3}"
-                           Text="点击上方「新建插件模板」会在插件目录里生成一份可直接运行的示例，&#xa;照着改 main.xaml 就能做出自己的插件。" />
-            </StackPanel>
-        </local:MyCard>
-
-        <!-- 插件列表 -->
-        <StackPanel x:Name="PanPluginList" />
-        </StackPanel>
-
-        <!-- ===== 1. 创建插件 ===== -->
-        <StackPanel x:Name="PanSecCreate" Visibility="Collapsed">
-            <local:MyCard Title="创建插件" Margin="0,0,0,15">
-                <StackPanel Margin="25,38,25,16">
-                    <TextBlock TextWrapping="Wrap"
-                               Text="点下方按钮会生成一份可直接运行的插件骨架：plugin.json 清单 + main.xaml 界面。&#xa;生成后到插件目录里改文件，回到「已安装」点重新扫描即可看到效果。" />
-                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                        <local:MyButton x:Name="BtnCreatePlugin" Text="新建插件骨架" Height="32" MinWidth="140" />
-                        <local:MyButton x:Name="BtnCreateFolder" Text="打开插件目录" Height="32" MinWidth="120" Margin="10,0,0,0" />
+                <local:MyCard Title="插件" Margin="0,0,0,15">
+                    <StackPanel Margin="25,38,25,16">
+                        <TextBlock x:Name="LabPluginSummary" TextWrapping="Wrap" Text="正在扫描插件……" />
+                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                            <local:MyButton x:Name="BtnCreatePlugin" Text="新建插件骨架" Height="32" MinWidth="140" />
+                            <local:MyButton x:Name="BtnCreateFolder" Text="打开插件目录" Height="32" MinWidth="120" Margin="10,0,0,0" />
+                            <local:MyButton x:Name="BtnPluginRescan" Text="重新扫描" Height="32" MinWidth="100" Margin="10,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{DynamicResource ColorBrushGray3}"
+                                   Text="插件是放在 PCL\Plugins 下的独立文件夹，包含 plugin.json 清单与 main.xaml 界面。安装插件不需要重新编译启动器。&#xa;插件只能声明并使用清单里写明的权限，无法读取账号凭据。" />
                     </StackPanel>
-                </StackPanel>
-            </local:MyCard>
-        </StackPanel>
+                </local:MyCard>
 
-        <!-- ===== 3. 插件广场 ===== -->
-        <StackPanel x:Name="PanSecStore" Visibility="Collapsed">
-            <local:MyCard Title="插件广场" Margin="0,0,0,15">
-                <StackPanel Margin="25,38,25,16">
-                    <TextBlock x:Name="LabStoreStatus" TextWrapping="Wrap" Text="正在从 GitHub 获取插件列表……" />
-                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                        <local:MyButton x:Name="BtnStoreRefresh" Text="刷新" Height="32" MinWidth="90" />
-                        <local:MyButton x:Name="BtnStoreUpload" Text="怎么发布我的插件" Height="32" MinWidth="160" Margin="10,0,0,0" />
+                <local:MyCard x:Name="PanPluginEmpty" Margin="0,0,0,15" Visibility="Collapsed">
+                    <StackPanel Margin="25,38,25,30">
+                        <TextBlock Text="还没有安装插件" FontSize="15" HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource ColorBrushGray2}" />
+                        <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" HorizontalAlignment="Center"
+                                   TextAlignment="Center" FontSize="12.5"
+                                   Foreground="{DynamicResource ColorBrushGray3}"
+                                   Text="点「新建插件骨架」会生成一份可直接运行的示例，&#xa;照着改 main.xaml 就能做出自己的插件。" />
                     </StackPanel>
-                    <TextBlock Margin="0,12,0,0" TextWrapping="Wrap" FontSize="12"
-                               Foreground="{DynamicResource ColorBrushGray3}"
-                               Text="广场收录 GitHub 上打了 pcl-plugin topic 的仓库。安装前会自动审计，含危险内容的会被拒绝。" />
-                </StackPanel>
-            </local:MyCard>
-            <StackPanel x:Name="PanStoreList" />
-        </StackPanel>
+                </local:MyCard>
 
-        <!-- ===== 2. 开发文档 ===== -->
-        <StackPanel x:Name="PanSecDoc" Visibility="Collapsed">
-            <local:MyCard Title="插件开发文档" Margin="0,0,0,15">
-                <StackPanel Margin="25,38,25,16">
-                    <TextBlock TextWrapping="Wrap" FontSize="12"
-                               Foreground="{DynamicResource ColorBrushGray3}"
-                               Text="下面是完整的清单字段与可用控件说明。照着写就能做出能用的插件。" />
-                </StackPanel>
-            </local:MyCard>
-            <StackPanel x:Name="PanDocContent" />
-        </StackPanel>
+                <StackPanel x:Name="PanPluginList" />
+            </StackPanel>
 
-    </Grid>
+            <!-- ===== 1. 创建插件 ===== -->
+            <StackPanel x:Name="PanSecCreate" Visibility="Collapsed">
+                <local:MyCard Title="创建插件" Margin="0,0,0,15">
+                    <StackPanel Margin="25,38,25,16">
+                        <TextBlock TextWrapping="Wrap"
+                                   Text="点下方按钮会生成一份可直接运行的插件骨架：plugin.json 清单 + main.xaml 界面。&#xa;生成后到插件目录里改文件，回到「已安装」点重新扫描即可看到效果。" />
+                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                            <local:MyButton x:Name="BtnCreate2" Text="新建插件骨架" Height="32" MinWidth="140" />
+                            <local:MyButton x:Name="BtnCreateFolder2" Text="打开插件目录" Height="32" MinWidth="120" Margin="10,0,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </local:MyCard>
+            </StackPanel>
+
+            <!-- ===== 2. 插件广场 ===== -->
+            <StackPanel x:Name="PanSecStore" Visibility="Collapsed">
+                <local:MyCard Title="插件广场" Margin="0,0,0,15">
+                    <StackPanel Margin="25,38,25,16">
+                        <TextBlock x:Name="LabStoreStatus" TextWrapping="Wrap" Text="正在从 GitHub 获取插件列表……" />
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <local:MyButton x:Name="BtnStoreRefresh" Text="刷新" Height="32" MinWidth="90" />
+                            <local:MyButton x:Name="BtnStoreUpload" Text="怎么发布我的插件" Height="32" MinWidth="160" Margin="10,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Margin="0,12,0,0" TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{DynamicResource ColorBrushGray3}"
+                                   Text="广场收录 GitHub 上打了 pcl-plugin topic 的仓库。安装前会自动审计，含危险内容的会被拒绝。" />
+                    </StackPanel>
+                </local:MyCard>
+                <StackPanel x:Name="PanStoreList" />
+            </StackPanel>
+
+            <!-- ===== 3. 开发文档 ===== -->
+            <StackPanel x:Name="PanSecDoc" Visibility="Collapsed">
+                <local:MyCard Title="插件开发文档" Margin="0,0,0,15">
+                    <StackPanel Margin="25,38,25,16">
+                        <TextBlock TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{DynamicResource ColorBrushGray3}"
+                                   Text="完整的清单字段、可用控件、脚本 API 与排查方法。照着写就能做出能用的插件。" />
+                    </StackPanel>
+                </local:MyCard>
+                <StackPanel x:Name="PanDocContent" />
+            </StackPanel>
+
+        </Grid>
+    </local:MyScrollViewer>
 </local:MyPageRight>

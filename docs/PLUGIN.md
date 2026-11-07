@@ -280,3 +280,269 @@ function loadConfig() {
 ---
 
 *文档版本 1.0 · 对应启动器版本码 100*
+
+---
+
+# 附录：完整 API 参考
+
+> 这一节是速查表。上面各章讲「为什么」，这里只讲「怎么写」。
+
+## A. plugin.json 全部字段
+
+| 字段 | 类型 | 默认 / 必填 | 说明 |
+|---|---|---|---|
+| `id` | String | **必填** | 唯一标识，反域名格式，如 `com.example.hello`。重复会互相覆盖 |
+| `name` | String | **必填** | 显示名称，也是默认的标题栏文字 |
+| `version` | String | **必填** | 版本号，如 `1.0.0` |
+| `author` | String | — | 作者名 |
+| `description` | String | — | 一句话说明，显示在插件卡片上 |
+| `entry` | String | `main.xaml` | 入口 XAML 文件名 |
+| `icon` | String | — | 头像文件名。留空自动生成首字母头像 |
+| `configPage` | String | — | 配置页 XAML。留空则不显示「设置」按钮 |
+| `category` | String | — | 分类，用于列表分组 |
+| `homepage` | String | — | 主页地址，显示「主页」按钮 |
+| `titlebar` | Boolean | `false` | 为 `true` 时在启动器标题栏加入口 |
+| `titlebarText` | String | — | 标题栏按钮文字，留空用 `name` |
+| `titlebarIcon` | String | — | SVG path 数据，视口 24×24 |
+| `needNetwork` | Boolean | `false` | 声明需要网络，影响审计提示 |
+| `needPlayerData` | Boolean | `false` | 声明要读玩家数据，供用户判断 |
+| `needExecute` | Boolean | `false` | **已废弃**：启动器不提供执行外部程序的能力 |
+| `minVersionCode` | Integer | `0` | 最低启动器版本码，低于此值拒绝加载 |
+
+## B. 可用的界面控件
+
+| 控件 | 常用属性 | 说明 |
+|---|---|---|
+| `local:MyCard` | `Title` | 卡片容器，最外层通常用它 |
+| `local:MyButton` | `Text` | 按钮，事件用 `AddHandler` 或 XAML 里 `Handles` |
+| `local:MyTextBox` | `Text`, `HintText` | 输入框 |
+| `local:MyComboBox` | `Items`, `SelectedIndex` | 下拉框，配合 `MyComboBoxItem` |
+| `local:MyCheckBox` | `Text`, `Checked` | 复选框 |
+| `local:MyListItem` | `Title`, `Info` | 列表项，`Type` 可设 `RadioBox` |
+| `local:MyIconButton` | `Logo`, `ToolTip` | 图标按钮，`Logo` 是 SVG path |
+| `local:MyHint` | `Text`, `Theme` | 提示条，`Theme` 可为 Blue/Green/Yellow/Red |
+| `local:MyImage` | `Source` | 图片，可读插件目录内的文件 |
+| `local:MySlider` | `Value`, `Min`, `Max` | 滑块 |
+| `local:MyLoading` | — | 加载动画 |
+| `TextBlock` | `Text`, `FontSize` | 文本，**必须**设 `TextWrapping="Wrap"` |
+| `Grid` / `StackPanel` | — | 布局容器，不要写死 `Height` |
+
+## C. 主题资源（颜色）
+
+| 资源名 | 用途 |
+|---|---|
+| `ColorBrush1` | 正文文字 |
+| `ColorBrush2` | 次要文字 |
+| `ColorBrush3` | 强调与标题 |
+| `ColorBrushGray1` | 浅色背景块 |
+| `ColorBrushGray2` | 分隔线与占位 |
+| `ColorBrushGray3` | 小字说明 |
+| `ColorBrushBackground` | 页面背景 |
+| `ColorBrush8` | 标题栏文字 |
+
+**为什么必须用主题变量**：写死色值（如 `#FFFFFF`）在深色主题下会变成刺眼白块。
+
+```xml
+<TextBlock Foreground="{DynamicResource ColorBrush1}" Text="正文" />
+```
+
+## D. main.js 脚本 API
+
+| API | 返回 | 说明 |
+|---|---|---|
+| `PCL.ReadFile(path)` | String | 读插件目录内文本文件，越界返回 `null` |
+| `PCL.WriteFile(path, text)` | Boolean | 写文件，自动建目录，失败返回 `false` |
+| `PCL.FileExists(path)` | Boolean | 判断插件目录内文件是否存在 |
+| `PCL.Toast(text)` | void | 弹一条提示 |
+| `PCL.HttpGet(url)` | String | GET 请求，仅限 `http`/`https` |
+| `PCL.GetSetting(key)` | String | 读白名单设置：`UiLauncherTheme` / `UiLauncherHue` |
+| `PCL.Home` | String | 插件目录绝对路径（只读） |
+| `PCL.Id` | String | 插件 id（只读） |
+| `PCL.LauncherVersion` | String | 启动器版本号（只读） |
+
+## E. 权限声明与实际影响
+
+| 权限 | 默认 | 实际影响 |
+|---|---|---|
+| `needNetwork` | `false` | 为 `true` 才能用 `PCL.HttpGet` |
+| `needPlayerData` | `false` | 仅作声明，让用户看到你要读玩家数据 |
+| `needExecute` | `false` | **已废弃**，填了也没有作用 |
+| （都不声明） | — | 只能读写自己目录、弹提示，不能联网 |
+
+## F. 安全审计规则
+
+安装前会静态扫描插件内容。命中以下规则的处理方式：
+
+| 命中规则 | 特征 | 处理 |
+|---|---|---|
+| 进程执行 | `Process.Start` / `Shell` / `cmd.exe` / `powershell` | **危险 · 拒绝加载** |
+| 注册表写入 | `Registry` / `HKEY_` | **危险 · 拒绝加载** |
+| 本地路径读取 | `file://` / `C:\` / `\\?\` | **危险 · 拒绝加载** |
+| 动态执行 | `eval()` / `new Function()` / `ActiveXObject` | **危险 · 拒绝加载** |
+| 路径穿越 | `../` 或 `..\` | **危险 · 拒绝加载** |
+| 仅网络访问 | `http://` 或 `https://` | 需注意 · 允许 |
+| 剪贴板 | `Clipboard` / `GetText` / `SetText` | 需注意 · 允许 |
+| 输入模拟 | `SendKeys` / `keybd_event` | 需注意 · 允许 |
+| needExecute | 清单里声明该项 | 需注意 · 提示无效 |
+
+> **审计不是沙箱。** 它做静态模式匹配，绕过方式是存在的。
+> 它的价值在于挡住「不小心写错」和「明显恶意」，并让用户看到基于实际内容的判断。
+
+## G. 插件生命周期
+
+| 阶段 | 发生什么 |
+|---|---|
+| 加载 | 启动器启动或点「重新扫描」时扫描 `PCL\Plugins` |
+| 解析 | 读 `plugin.json`，缺必填字段则标记不可用 |
+| 审计 | 静态扫描危险模式，命中即拒绝 |
+| 渲染 | 把 `main.xaml` 解析成 WPF 控件树 |
+| 标题栏 | `titlebar=true` 时加入标题栏入口 |
+| 禁用 | 保留在磁盘，但不加载、不显示入口 |
+
+## H. 发布到插件广场
+
+不需要提交表单，也不需要审核队列：
+
+```bash
+# 1. 建一个公开 GitHub 仓库，含 plugin.json 与 main.xaml
+git init && git add . && git commit -m "init"
+git remote add origin https://github.com/<you>/<repo>.git
+git push -u origin main
+
+# 2. 给仓库加 topic：pcl-plugin
+#    在仓库首页右侧 About → 齿轮 → Topics 里填
+```
+
+广场会通过 GitHub Search API 拉取所有带该 topic 的仓库，按 star 排序展示。
+
+安装时程序会下载 zip、解压、跑审计；含危险内容的会被**拒绝并删除**。
+
+---
+
+完整字段表、控件表、脚本 API、权限与审计规则都在上面。
+如果还有没覆盖到的用法，说明这份文档需要补充 —— 欢迎提 Issue。
+
+---
+
+# Java 插件
+
+> 从 v1.1 开始支持。清单里写 `"runtime": "java"` 即可。
+
+## 为什么有 Java 插件
+
+XAML + 脚本能做到「改界面、加按钮、调 API」，但做不了复杂计算：
+
+- 解析 NBT / region 文件
+- 处理大型日志
+- 实现算法（寻路、排序、图像处理）
+
+Java 插件跑成独立进程，能写真正的代码。而玩 Minecraft 的机器必然装了 Java，
+不需要为了插件再装运行时。
+
+## 目录结构
+
+```
+PCL/Plugins/my-java-plugin/
+├── plugin.json      # 清单
+└── plugin.jar       # 编译好的 jar（入口类必须有 main 方法）
+```
+
+`plugin.json` 示例：
+
+```json
+{
+  "id": "com.example.nbt",
+  "name": "NBT 查看器",
+  "version": "1.0.0",
+  "runtime": "java",
+  "titlebar": true,
+  "titlebarText": "NBT"
+}
+```
+
+## 通信协议
+
+启动器与插件通过 **stdin / stdout** 交换 **一行一条 JSON**。
+
+### 启动器 → 插件
+
+```json
+{"type":"hello","pluginId":"com.example.nbt","launcherVersion":"1.0.0","actions":["toast","get_version","log"]}
+{"type":"reply","action":"get_version","ok":true,"value":"1.0.0"}
+{"type":"shutdown"}
+```
+
+### 插件 → 启动器
+
+```json
+{"action":"get_version"}
+{"action":"toast","text":"处理完成"}
+{"action":"log","text":"读取了 128 个区块"}
+```
+
+## 能力白名单
+
+**这是安全边界。** 不在表里的 action 一律被拒绝，并回一条 error。
+
+| action | 参数 | 作用 |
+|---|---|---|
+| `toast` | `text` | 弹一条提示 |
+| `log` | `text` | 写启动器日志 |
+| `get_version` | — | 取启动器版本号 |
+| `get_setting` | `key` | 读白名单设置 |
+| `set_setting` | `key`, `value` | 写白名单设置 |
+| `get_theme` | — | 读当前主题 |
+| `set_theme` | `hue` | 改主题色相 |
+| `list_versions` | — | 列出游戏实例名 |
+
+可读写的设置键只有：`UiLauncherTheme`、`UiLauncherHue`、`UiLauncherSat`、`UiLauncherLight`。
+
+## Java 插件**做不到**什么
+
+| 想法 | 现实 |
+|---|---|
+| 直接操作 WPF 控件 | ❌ 跨进程，只能通过 action 请求 |
+| 读注册表 | ❌ 没有对应 action |
+| 执行系统命令 | ❌ 没有对应 action |
+| 读账号凭据 | ❌ 进程隔离，拿不到启动器内存 |
+| 改游戏文件 | ❌ 插件进程的当前目录是插件自己，没有文件 API |
+
+> 这不是限制得太死，而是**故意的**：
+> 插件能做什么，取决于启动器提供哪些消息，而不是它自己能 import 什么。
+> 这样恶意插件的上限被锁死了。
+
+## 编译与打包
+
+```bash
+# 关键：用 --release 8 保证兼容老 Java
+javac --release 8 -encoding UTF-8 PclPlugin.java
+jar cfe plugin.jar PclPlugin PclPlugin.class
+```
+
+**为什么必须 `--release 8`**：很多玩家装的是 Java 8。
+如果你用 JDK 21 直接编译，产物是 class 版本 65，Java 8 会报：
+
+```
+UnsupportedClassVersionError: class file version 65.0,
+this version only recognizes up to 52.0
+```
+
+这个错误我在本机实测复现过（javac 21 / java 8）。
+
+## 完整示例
+
+见仓库 [`docs/plugin-samples/java/`](../plugin-samples/java/PclPlugin.java)：
+
+- 零第三方依赖（自带极简 JSON 提取）
+- 处理 hello / reply / shutdown 三种消息
+- 演示 get_version 与 toast
+
+## 调试
+
+插件写 stderr 的内容会进启动器日志，带 `[插件 <id>]` 前缀。
+
+```java
+System.err.println("调试信息");  // 进日志，不干扰协议
+```
+
+> ⚠️ 不要把调试信息写到 stdout —— 那一行会被当成 JSON 解析失败。

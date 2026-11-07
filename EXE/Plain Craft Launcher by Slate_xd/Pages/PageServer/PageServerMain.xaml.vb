@@ -33,6 +33,11 @@ Public Class PageServerMain
 
     '当前下载目标目录名
     Private DownloadTarget As String = ""
+    
+    '设置下拉框选中项时会触发 SelectionChanged，导致同一个构建列表被请求两次
+    Private SuppressBuildReload As Boolean = False
+    '每次请求构建时递增。回调回来时比对，不一致说明用户已经换过选择，丢弃旧结果
+    Private BuildRequestGeneration As Integer = 0
 
     Private Sub PageLoaded() Handles Me.Loaded
         '把服务端输出接到控制台
@@ -369,7 +374,13 @@ Public Class PageServerMain
                 Item.Tag = V
                 ComboGameVersion.Items.Add(Item)
             Next
-            If ComboGameVersion.Items.Count > 0 Then ComboGameVersion.SelectedIndex = 0
+            '设置选中项会触发 SelectionChanged，先抑制，末尾统一加载一次
+            SuppressBuildReload = True
+            Try
+                If ComboGameVersion.Items.Count > 0 Then ComboGameVersion.SelectedIndex = 0
+            Finally
+                SuppressBuildReload = False
+            End Try
 
             '原版才有官方直连选项
             BtnUseMojang.Visibility = If(C.Kind = ModServerCore.CoreKind.Vanilla, Visibility.Visible, Visibility.Collapsed)
@@ -390,15 +401,23 @@ Public Class PageServerMain
             Dim Ver As String = TryCast(VerItem?.Tag, String)
             If String.IsNullOrWhiteSpace(Ver) Then Return
 
-            LabDownloadStatus.Text = $"正在查 {SelectedCore.Name} {Ver} 的构建……"
+            '记下这次请求属于第几代，回调时用来判断是否过期
+            BuildRequestGeneration += 1
+            Dim MyGen As Integer = BuildRequestGeneration
+            Dim CoreName As String = SelectedCore.Name
+
+            LabDownloadStatus.Text = $"正在查 {CoreName} {Ver} 的构建……"
             Dim T As New Threading.Thread(
                 Sub()
-                    Dim Builds = ModServerCore.FetchBuilds(SelectedCore.Name, Ver)
+                    Dim Builds = ModServerCore.FetchBuilds(CoreName, Ver)
                     RunInUi(
                         Sub()
+                            '用户已经换过核心/版本，这份结果作废，不能覆盖当前界面
+                            If MyGen <> BuildRequestGeneration Then Return
+                            
                             ComboBuild.Items.Clear()
                             If Builds.Count = 0 Then
-                                LabDownloadStatus.Text = $"{SelectedCore.Name} {Ver} 暂时没有可用构建，换个版本试试。"
+                                LabDownloadStatus.Text = $"{CoreName} {Ver} 暂时没有可用构建，换个版本试试。"
                                 Return
                             End If
                             For Each B In Builds
@@ -490,6 +509,7 @@ Public Class PageServerMain
     End Sub
 
     Private Sub ComboGameVersion_SelectionChanged(sender As Object, e As SelectionChangedEventArgs) Handles ComboGameVersion.SelectionChanged
+        If SuppressBuildReload Then Return
         If SelectedCore IsNot Nothing Then LoadBuilds()
     End Sub
 

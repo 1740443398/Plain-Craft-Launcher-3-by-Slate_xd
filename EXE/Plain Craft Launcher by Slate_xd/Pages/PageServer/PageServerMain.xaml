@@ -5,7 +5,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d" x:Class="PageServerMain"
     PanScroll="Content">
-    <Grid x:Name="Content" Margin="0,0,20,20">
+    <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="Content">
+        <Grid Margin="0,0,20,20">
 
         <!-- ===== 0. 服务端列表 ===== -->
         <StackPanel x:Name="PanSecVersions">
@@ -171,5 +172,6 @@
             <StackPanel x:Name="PanTemplateList" />
         </StackPanel>
 
-    </Grid>
+        </Grid>
+    </local:MyScrollViewer>
 </local:MyPageRight>
