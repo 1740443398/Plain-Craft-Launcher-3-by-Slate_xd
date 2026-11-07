@@ -747,6 +747,78 @@ Install:
     ''' 两步都可取消，取消不产生任何副作用。
     ''' </para>
     ''' </summary>
+    ''' <summary>
+    ''' SPT · 任务反馈：检查依赖耗时不定，按钮进入「检查中」并禁用；
+    ''' 结果用弹窗分类呈现（确定的问题 / 无法确认），不阻塞 UI。
+    ''' </summary>
+    Private Sub BtnManageCheckDep_Click() Handles BtnManageCheckDep.Click
+        If Not BtnManageCheckDep.IsEnabled Then Return
+        If McInstanceSelected Is Nothing Then
+            Hint("请先选择一个版本", HintType.Blue)
+            Return
+        End If
+        Dim OldText As String = BtnManageCheckDep.Text
+        BtnManageCheckDep.IsEnabled = False
+        BtnManageCheckDep.Text = "检查中…"
+        RunInThread(
+        Sub()
+            Try
+                Dim Result = ModDependencyCheck.Check(McInstanceSelected)
+                RunInUi(Sub() ShowDependencyResult(Result))
+            Catch ex As Exception
+                Logger.Error(ex, "依赖检查失败")
+                RunInUi(Sub() Hint($"检查失败：{ex.Message}", HintType.Red))
+            Finally
+                RunInUi(
+                Sub()
+                    BtnManageCheckDep.Text = OldText
+                    BtnManageCheckDep.IsEnabled = True
+                End Sub)
+            End Try
+        End Sub)
+    End Sub
+
+    ''' <summary>把依赖检查结果分类呈现。</summary>
+    Private Sub ShowDependencyResult(Result As ModDependencyCheck.CheckResult)
+        Try
+            If Result Is Nothing Then Return
+            If Result.CheckedCount = 0 Then
+                Hint("没有找到可检查的 Mod", HintType.Blue)
+                Return
+            End If
+            If Not Result.HasIssues AndAlso Result.Uncertain.Count = 0 Then
+                Hint($"已检查 {Result.CheckedCount} 个 Mod，依赖齐全", HintType.Green)
+                Return
+            End If
+
+            Dim Lines As New List(Of String)
+            If Result.HasIssues Then
+                Lines.Add($"发现 {Result.Issues.Count} 个问题：")
+                Lines.Add("")
+                For Each Issue In Result.Issues.Take(12)
+                    Lines.Add("· " & Issue.DisplayText)
+                Next
+                If Result.Issues.Count > 12 Then Lines.Add($"…… 另有 {Result.Issues.Count - 12} 个")
+            Else
+                Lines.Add("未发现确定的依赖问题。")
+            End If
+
+            '无法确认的单独列出，明确说明不是错误
+            If Result.Uncertain.Count > 0 Then
+                Lines.Add("")
+                Lines.Add($"另有 {Result.Uncertain.Count} 项无法确认（版本写法无法解析，不代表有问题）：")
+                For Each U In Result.Uncertain.Take(5)
+                    Lines.Add("· " & U)
+                Next
+                If Result.Uncertain.Count > 5 Then Lines.Add($"…… 另有 {Result.Uncertain.Count - 5} 项")
+            End If
+
+            MyMsgBox(String.Join(vbCrLf, Lines), "依赖检查结果", "知道了")
+        Catch ex As Exception
+            Logger.Error(ex, "显示依赖检查结果失败")
+        End Try
+    End Sub
+
     Private Sub BtnManageRecycle_Click() Handles BtnManageRecycle.Click
         OpenRecycleBin()
     End Sub

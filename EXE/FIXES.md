@@ -318,6 +318,38 @@ End Sub
 
 ---
 
+### 模组依赖检查
+
+`Modules/Minecraft/ModDependencyCheck.vb` + Mod 管理页「检查依赖」按钮。
+
+判断链条：`ModMeta.ReadMeta` 读声明 → 与本地 ID 表比对 → `ModVersionRange.MatchVersion` 校验版本。
+
+**三态原则**：
+
+| 结果 | 处理 |
+|---|---|
+| 确定不满足 | 列为问题 |
+| 确定满足 | 通过 |
+| **无法确认** | 单独归类，**不当作错误** |
+
+版本范围写法太杂，猜错会让玩家删掉本来能用的 Mod。所以「无法确认」只作提示，不报警。
+
+**自动跳过**：`fabricloader`、`fabric-api`、`minecraft`、`java`、`forge`、`neoforge`
+—— 这些由启动器负责，不是玩家该补的。
+
+**只读**：不执行 JAR 代码、不自动下载、不自动删除。
+
+**测试**：`tests\run-depcheck-tests.ps1`，构造真实 JAR 验证
+
+```
+参与检查: 3   解析失败: 0   确定问题: 2
+[VersionMismatch] Mod A 需要 cloth-config >=11.0.0，本地是 9.0.0
+[Missing] Mod C 需要前置 sodium
+通过 5，失败 0
+```
+
+---
+
 ## 九、关键陷阱备忘
 
 | 陷阱 | 说明 |
