@@ -282,8 +282,10 @@ Public Module ModTerracotta
     ''' <param name="TargetExe">期望的 terracotta.exe 路径。</param>
     ''' <param name="Progress">进度回调（0~1）与状态文字。</param>
     ''' <returns>是否可用。</returns>
+    '''' <param name="OverrideUrls">仅供测试：传入自定义下载地址以跳过网络依赖。产品代码不传，始终走内置 DownloadUrls。</param>
     Public Function EnsureInstalled(TargetExe As String,
-                                    Optional Progress As Action(Of Double, String) = Nothing) As Boolean
+                                    Optional Progress As Action(Of Double, String) = Nothing,
+                                    Optional OverrideUrls As IEnumerable(Of String) = Nothing) As Boolean
         Dim ArchivePath As String = Nothing
         Dim ExtractDir As String = Nothing
         Try
@@ -292,7 +294,7 @@ Public Module ModTerracotta
             Dim Dir = PathUtils.RemoveLastPart(TargetExe)
             DirectoryUtils.Create(Dir)
 
-            Dim Urls = DownloadUrls.Select(Function(u) u.Replace("{arch}", ArchTag())).ToList()
+            Dim Urls = (If(OverrideUrls, DownloadUrls)).Select(Function(u) u.Replace("{arch}", ArchTag())).ToList()
             ArchivePath = System.IO.Path.Combine(PathTemp, $"terracotta-{Guid.NewGuid():N}.tar.gz")
             DirectoryUtils.Create(PathTemp)
 

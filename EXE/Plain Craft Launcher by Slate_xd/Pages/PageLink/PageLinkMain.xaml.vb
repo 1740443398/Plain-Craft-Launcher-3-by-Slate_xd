@@ -733,6 +733,10 @@ ForcedPass:
     ''' 即使失败也不会抛出异常。
     ''' </summary>
     Public Shared Sub ProcessStop()
+        'SPT 22 · 取消：让所有在跑的轮询线程立即失效，
+        '否则用户返回主页后线程还会空转最多 10 分钟。
+        PollGeneration += 1
+        UsingTerracotta = False
         Try
             '关闭未捕获的进程
             For Each ProcessObject In Process.GetProcesses
@@ -1271,20 +1275,42 @@ ForcedPass:
     ''' 轮询 Terracotta 状态并同步到页面。
     ''' 按文档建议 500ms 间隔；只处理 index 增大的响应。
     ''' </summary>
+    'SPT 22 · 任务身份隔离：
+    '每次开房/加入都分配一个递增代号。轮询线程持有自己的代号，
+    '只有代号仍等于当前值时才允许写界面 —— 这样用户返回主页再重新开房时，
+    '上一次残留的轮询不会把旧状态盖到新任务上。
+    Private Shared PollGeneration As Integer = 0
     Private LastTcIndex As Long = -1
 
     Private Sub StartTerracottaPolling()
+        '每次启动轮询都换一个代号，旧线程下一次循环就会自行退出
+        PollGeneration += 1
+        Dim MyGen = PollGeneration
+        LastTcIndex = -1
+
         RunInThread(
         Sub()
             Try
                 For i = 1 To 1200 '最多约 10 分钟
                     Threading.Thread.Sleep(500)
+                    '代号变了说明用户已经开了新任务或离开了页面，本线程必须退出
+                    If MyGen <> PollGeneration Then Return
                     If Not UsingTerracotta Then Return
+
                     Dim Snap = ModTerracotta.GetState()
                     If Snap Is Nothing Then Continue For
+                    '只处理更新的状态，避免旧响应把界面回退
                     If Snap.Index <= LastTcIndex Then Continue For
                     LastTcIndex = Snap.Index
-                    RunInUi(Sub() ApplyTerracottaState(Snap))
+
+                    Dim CapturedGen = MyGen
+                    RunInUi(
+                    Sub()
+                        '二次确认：UI 队列里排队期间任务可能已经换了
+                        If CapturedGen <> PollGeneration Then Return
+                        ApplyTerracottaState(Snap)
+                    End Sub)
+
                     '终态就停止轮询
                     If Snap.State = ModTerracotta.RoomState.HostOk OrElse
                        Snap.State = ModTerracotta.RoomState.GuestOk OrElse
