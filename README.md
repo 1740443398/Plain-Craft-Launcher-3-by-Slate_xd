@@ -1,6 +1,6 @@
 <div align="center">
 
-# Plain Craft Launcher 3 by Slate_xd
+# Plain Craft Launcher by Slate_xd
 
 **基于 Plain Craft Launcher 2.13.1.1 的第三方修改版**
 
@@ -47,7 +47,7 @@ site/
 │   └── 推送工具.ps1             命令行发布工具
 │
 ├── EXE/                         客户端，WPF 桌面程序
-│   ├── Plain Craft Launcher 3/  VB.NET 主项目
+│   ├── Plain Craft Launcher/  VB.NET 主项目
 │   ├── PCLCS/                   C# 辅助库
 │   ├── patches/                 上游补丁
 │   └── runtime/
@@ -71,7 +71,7 @@ site/
 ### 只想用客户端
 
 1. 安装 [.NET Framework 4.8](https://dotnet.microsoft.com/download/dotnet-framework/net48)（Windows 10 2004+ 已内置）
-2. 下载并运行 `Plain Craft Launcher 3.exe`
+2. 下载并运行 `Plain Craft Launcher.exe`
 3. 首次启动会让你选择游戏目录，选好后即可启动游戏
 
 ### 想自己编译
@@ -81,11 +81,11 @@ git clone <本仓库地址>
 cd site\EXE
 
 "C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe" ^
-  "Plain Craft Launcher 3\Plain Craft Launcher 3.vbproj" ^
+  "Plain Craft Launcher\Plain Craft Launcher.vbproj" ^
   /p:Configuration=Release /p:Platform=AnyCPU /p:OutputPath="out\"
 ```
 
-产物在 `EXE\out\Plain Craft Launcher 3.exe`。
+产物在 `EXE\out\Plain Craft Launcher.exe`。
 
 ### 想部署服务端
 
@@ -181,7 +181,7 @@ PCL 的许可证要求衍生作品的**界面主色相必须为蓝色**，因为
 本项目通过编译常量区分两种构建：
 
 ```vb
-' EXE/Plain Craft Launcher 3/Modules/Base/ModBase.vb
+' EXE/Plain Craft Launcher/Modules/Base/ModBase.vb
 Public Const AllowAllThemes As Boolean = False
 ```
 
@@ -212,7 +212,7 @@ Public Const AllowAllThemes As Boolean = False
 | 根命名空间 | `PCL` |
 | 打包 | 单文件（ILMerge + 资源内嵌） |
 
-主要依赖（`EXE/Plain Craft Launcher 3/Resources/`）：
+主要依赖（`EXE/Plain Craft Launcher/Resources/`）：
 
 - `Newtonsoft.Json` — JSON 解析
 - `NAudio` — 音频播放
@@ -305,7 +305,7 @@ YOUR_QQ_SMTP_AUTH_CODE
 | # | 要求 | 本项目 |
 |---|---|---|
 | 1 | 明确表示是第三方二次创作 | ✅ 见下方声明 |
-| 2 | 名称以 `Plain Craft Launcher` 开头 + 第三方修改后缀 | ✅ `Plain Craft Launcher 3 by Slate_xd` |
+| 2 | 名称以 `Plain Craft Launcher` 开头 + 第三方修改后缀 | ✅ `Plain Craft Launcher by Slate_xd` |
 | 3 | 关于页首位为龙腾猫跃并附赞助链接 | ✅ 已保留 |
 | 4 | 公开源代码，继续使用本 LICENCE | ✅ 本仓库公开 |
 | 5 | 实现 McLaunchPrecheck 正版购买劝导 | ✅ 保留上游实现 |

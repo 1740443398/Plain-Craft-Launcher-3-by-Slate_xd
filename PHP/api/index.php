@@ -1,6 +1,6 @@
 <?php
 /**
- * Plain Craft Launcher 3 · 后端接口
+ * Plain Craft Launcher by Slate_xd · 后端接口
  *
  * 设计要点：
  *   · 投稿 / 反馈向所有用户开放，无需注册
@@ -26,7 +26,7 @@ const SMTP_PORT   = 465;
 const SMTP_USER   = '1740443398@qq.com';
 const SMTP_PASS   = 'mwydlrxfkkkqdejg';
 const SMTP_FROM   = '1740443398@qq.com';
-const SMTP_FROM_NAME = 'PCL3 反馈中心';
+const SMTP_FROM_NAME = 'PCL 反馈中心';
 const SMTP_ENABLED = true;
 
 // 限流参数
@@ -409,7 +409,7 @@ function mailTemplate($title, $intro, $items, $footer) {
         . '<p style="margin:20px 0 0;color:#8b939d;font-size:12px;line-height:1.7">' . $footer . '</p>'
         . '</div></div>'
         . '<div style="max-width:560px;margin:14px auto 0;text-align:center;color:#8b939d;font-size:11px">'
-        . 'Plain Craft Launcher 3 · 此邮件由系统自动发送，请勿直接回复</div>'
+        . 'Plain Craft Launcher by Slate_xd · 此邮件由系统自动发送，请勿直接回复</div>'
         . '</div>';
 }
 
@@ -1067,9 +1067,9 @@ function notifyFeedbackSubmit($f) {
             '当前状态' => statusLabel('open'),
             '提交时间' => date('Y-m-d H:i:s', $f['time'] ?? time()),
         ],
-        '你可以凭反馈编号在 PCL3 内查询处理进度。感谢你的反馈！'
+        '你可以凭反馈编号在 PCL 内查询处理进度。感谢你的反馈！'
     );
-    return smtpSend($to, '【PCL3】反馈已提交 · ' . ($f['title'] ?? ''), $html);
+    return smtpSend($to, '【PCL】反馈已提交 · ' . ($f['title'] ?? ''), $html);
 }
 
 function notifyFeedback($f, $oldStatus, $newStatus) {
@@ -1089,7 +1089,7 @@ function notifyFeedback($f, $oldStatus, $newStatus) {
         ],
         '如果问题已解决，无需再回复。若仍有疑问，可重新提交反馈并附上此编号。'
     );
-    return smtpSend($to, '【PCL3】反馈状态更新：' . $label, $html);
+    return smtpSend($to, '【PCL】反馈状态更新：' . $label, $html);
 }
 
 function notifyCaveSubmit($c) {
@@ -1106,7 +1106,7 @@ function notifyCaveSubmit($c) {
         ],
         '感谢你的投稿！'
     );
-    return smtpSend($to, '【PCL3】回声洞投稿已收到', $html);
+    return smtpSend($to, '【PCL】回声洞投稿已收到', $html);
 }
 
 function notifyCave($c, $op) {
@@ -1125,5 +1125,5 @@ function notifyCave($c, $op) {
         ],
         $approved ? '感谢你的投稿！' : '如对结果有疑问，可提交反馈说明情况。'
     );
-    return smtpSend($to, $approved ? '【PCL3】回声洞投稿已通过' : '【PCL3】回声洞投稿已驳回', $html);
+    return smtpSend($to, $approved ? '【PCL】回声洞投稿已通过' : '【PCL】回声洞投稿已驳回', $html);
 }

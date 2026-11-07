@@ -1,6 +1,6 @@
 <div align="center">
 
-# PCL3 客户端
+# 本项目 客户端
 
 **Minecraft 启动器 · WPF 桌面程序**
 
@@ -345,20 +345,20 @@ Windows 10 版本 2004 及以后已内置 .NET Framework 4.8。较旧的系统�
 cd EXE
 
 "C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe" ^
-  "Plain Craft Launcher 3\Plain Craft Launcher 3.vbproj" ^
+  "Plain Craft Launcher\Plain Craft Launcher.vbproj" ^
   /p:Configuration=Release ^
   /p:Platform=AnyCPU ^
   /p:OutputPath="out\"
 ```
 
-产物：`EXE\out\Plain Craft Launcher 3.exe`（约 7.3 MB，单文件）
+产物：`EXE\out\Plain Craft Launcher.exe`（约 7.3 MB，单文件）
 
 ### 使用 Roslyn
 
 项目使用了一些较新的 VB 语法。如果系统自带的编译器报语法错误，指定 Roslyn 工具集：
 
 ```bat
-MSBuild.exe "Plain Craft Launcher 3\Plain Craft Launcher 3.vbproj" ^
+MSBuild.exe "Plain Craft Launcher\Plain Craft Launcher.vbproj" ^
   /p:Configuration=Release ^
   /p:VbcToolPath="path\to\roslyn\" ^
   /p:VbcExe=vbc.exe ^
@@ -371,7 +371,7 @@ Roslyn 可从 [NuGet](https://www.nuget.org/packages/Microsoft.Net.Compilers.Too
 
 ### Visual Studio
 
-1. 打开 `Plain Craft Launcher 3.vbproj`
+1. 打开 `Plain Craft Launcher.vbproj`
 2. 配置选 `Release`，平台选 `AnyCPU`
 3. 生成 → 生成解决方案
 
@@ -394,7 +394,7 @@ PCL 的许可证要求衍生作品的**界面主色相必须为蓝色**，因为
 本项目通过一个常量控制：
 
 ```vb
-' Plain Craft Launcher 3\Modules\Base\ModBase.vb 第 20 行
+' Plain Craft Launcher\Modules\Base\ModBase.vb 第 20 行
 Public Const AllowAllThemes As Boolean = False
 ```
 
@@ -475,7 +475,7 @@ bmclapi（第一源） → 官方源 → 镜像
 ## 项目结构
 
 ```
-Plain Craft Launcher 3/
+Plain Craft Launcher/
 ├── Controls/              自定义控件
 │   ├── MyButton.xaml      按钮（圆角 5，高 35）
 │   ├── MyCard.vb          卡片容器
@@ -586,7 +586,7 @@ End Sub
 XAML 里引用：
 
 ```xml
-<Image Source="/Plain Craft Launcher 3;component/Images/Heads/新头像.png" />
+<Image Source="/Plain Craft Launcher;component/Images/Heads/新头像.png" />
 ```
 
 > **常见坑**：忘记登记 `<Resource>` 时，XAML 编译不报错，但运行时会找不到图片，显示为空白。新增头像后务必检查 `.vbproj`。

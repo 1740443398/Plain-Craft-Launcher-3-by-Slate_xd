@@ -1,6 +1,6 @@
 <div align="center">
 
-# PCL3 服务端
+# 本项目 服务端
 
 **回声洞 · 反馈中心 · 版本推送 · 新功能投票**
 
@@ -356,14 +356,14 @@ HTTP 状态码：`200` 成功、`400` 参数错误、`401` 未登录、`403` 无
 
 ```powershell
 $ApiBase   = "https://your-domain/api/"
-$Password  = $env:PCL3_ADMIN_PASSWORD    # 从环境变量读取
+$Password  = $env:本项目_ADMIN_PASSWORD    # 从环境变量读取
 $ClientKey = "你的CLIENT_API_KEY"
 ```
 
 设置环境变量：
 
 ```powershell
-$env:PCL3_ADMIN_PASSWORD = "你的管理员密码"
+$env:本项目_ADMIN_PASSWORD = "你的管理员密码"
 ```
 
 ### 使用

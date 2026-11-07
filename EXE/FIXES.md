@@ -1,6 +1,6 @@
-﻿# PCL3 修复清单
+﻿# 本项目 修复清单
 
-> 版本：3.00.0.1-beta (415)
+> 版本：1.0.0 (415)
 > 基线：Plain Craft Launcher 2.13.1.1
 > 日期：2026-11-06
 
@@ -96,16 +96,16 @@ End Sub
 
 ```
 ┌─────────────────────────────────────────────┐
-│  PCL3 by Slate_xd    启动 下载 联机 设置 更多  ─ □ ✕ │
+│  本项目 by Slate_xd    启动 下载 联机 设置 更多  ─ □ ✕ │
 └─────────────────────────────────────────────┘
 ```
 
 | 元素 | 实现 |
 |---|---|
-| `PCL3` | `TextBlock` 19px SemiBold，纯白 |
+| `本项目` | `TextBlock` 19px SemiBold，纯白 |
 | `by Slate_xd` | `TextBlock` 10.5px，`VerticalAlignment="Bottom"` + 底部 3px 边距，形成右下角小字效果 |
 | 颜色随主题 | `Foreground="{DynamicResource ColorBrush6}"` — 该画刷在 `ModSecret.vb:L116` 随主题刷新（HSL 色相跟随主题，亮度 91%） |
-| 窗口标题 | `Title="Plain Craft Launcher 3"` |
+| 窗口标题 | `Title="Plain Craft Launcher"` |
 
 `PanTitleBrand` 在 `UiLogoType` 的所有分支（0/1/2/3）下均设为 `Visible`，并把原 `ShapeTitleLogo`、`LabTitleLogo`、`ImageTitleLogo` 全部折叠，避免叠加。
 
@@ -129,10 +129,10 @@ End Sub
 单次启动 20 秒，日志 **68 行，0 条错误、0 条警告**：
 
 ```
-[Application] 程序版本：内测版 3.00.0.1-beta (415)
+[Application] 程序版本：内测版 1.0.0 (415)
 [FormMain]    从设置更新背景图片与标题栏样式
 [FormMain]    窗口已置顶，位置：(20, 10), 1240 x 660
-窗口标题: 'Plain Craft Launcher 3'
+窗口标题: 'Plain Craft Launcher'
 [ModByethost] 已算出 Byethost 挑战 cookie
 [ModHitokoto] 已获取一言
 [ModDownload] Mojang 官方源加载耗时：491ms，可优先使用官方源
