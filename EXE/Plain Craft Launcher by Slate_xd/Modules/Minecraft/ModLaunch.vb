@@ -2332,6 +2332,16 @@ IgnoreCustomSkin:
         '启动计数
         Settings.Set("SystemLaunchCount", Settings.Get(Of Integer)("SystemLaunchCount") + 1)
 
+        '自动备份存档：只备份有变化的世界，失败只记日志，不影响退出流程
+        Try
+            If McInstanceSelected IsNot Nothing Then
+                Dim BackupCount = ModSaveBackup.BackupChangedWorlds(McInstanceSelected)
+                If BackupCount > 0 Then McLaunchLog($"已自动备份 {BackupCount} 个存档")
+            End If
+        Catch ex As Exception
+            Logger.Warn(ex, "自动备份存档失败")
+        End Try
+
     End Sub
 
 #End Region
